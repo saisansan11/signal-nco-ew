@@ -11,11 +11,43 @@ class AuthService {
     scopes: ['email', 'profile'],
   );
 
+  // รายชื่อ Email ครูผู้สอน
+  static const List<String> _teacherEmails = [
+    'wasan.t@signalschool.ac.th',
+  ];
+
   // Get current user
   User? get currentUser => _auth.currentUser;
 
   // Stream of auth changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+
+  // ตรวจสอบว่าเป็นครูหรือไม่ (จาก email)
+  bool isTeacherByEmail(String? email) {
+    if (email == null) return false;
+    return _teacherEmails.contains(email.toLowerCase());
+  }
+
+  // ตรวจสอบว่า user ปัจจุบันเป็นครูหรือไม่
+  Future<bool> isCurrentUserTeacher() async {
+    final user = currentUser;
+    if (user == null) return false;
+
+    // ตรวจจาก email whitelist ก่อน
+    if (isTeacherByEmail(user.email)) return true;
+
+    // ถ้าไม่อยู่ใน whitelist ให้ตรวจจาก Firestore
+    final doc = await _firestore.collection('users').doc(user.uid).get();
+    final data = doc.data();
+    return data?['role'] == 'teacher';
+  }
+
+  // ตั้ง role เป็น teacher (สำหรับ admin ใช้)
+  Future<void> setUserAsTeacher(String uid) async {
+    await _firestore.collection('users').doc(uid).update({
+      'role': 'teacher',
+    });
+  }
 
   // Sign in with Google
   Future<UserCredential?> signInWithGoogle() async {
@@ -70,6 +102,9 @@ class AuthService {
 
     if (!docSnapshot.exists) {
       // New user - create document
+      // ตรวจสอบว่าเป็นครูหรือไม่จาก email
+      final isTeacher = isTeacherByEmail(user.email);
+
       await userDoc.set({
         'uid': user.uid,
         'email': user.email,
@@ -77,7 +112,7 @@ class AuthService {
         'photoURL': user.photoURL,
         'createdAt': FieldValue.serverTimestamp(),
         'lastLoginAt': FieldValue.serverTimestamp(),
-        'role': 'student', // Default role
+        'role': isTeacher ? 'teacher' : 'student', // กำหนด role ตาม email
         'progress': {
           'completedModules': [],
           'completedLessons': [],

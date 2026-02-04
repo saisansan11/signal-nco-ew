@@ -6,6 +6,7 @@ import '../../app/constants.dart';
 import '../../data/curriculum_data.dart';
 import '../../models/curriculum_models.dart';
 import '../../models/progress_models.dart';
+import '../../services/auth_service.dart';
 import '../../services/progress_service.dart';
 import '../interactive/df_sim_screen.dart';
 import '../interactive/jamming_sim_screen.dart';
@@ -1227,15 +1228,24 @@ class _ProfileTab extends StatelessWidget {
                           ),
                         ),
                       ),
-                      _SettingsTile(
-                        icon: Icons.dashboard,
-                        title: 'Dashboard ครู',
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const TeacherDashboardScreen(),
-                          ),
-                        ),
+                      // แสดง Dashboard ครูเฉพาะครูเท่านั้น
+                      FutureBuilder<bool>(
+                        future: AuthService().isCurrentUserTeacher(),
+                        builder: (context, snapshot) {
+                          if (snapshot.data == true) {
+                            return _SettingsTile(
+                              icon: Icons.dashboard,
+                              title: 'Dashboard ครู',
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const TeacherDashboardScreen(),
+                                ),
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
                       ),
                       _SettingsTile(
                         icon: Icons.swap_horiz,
