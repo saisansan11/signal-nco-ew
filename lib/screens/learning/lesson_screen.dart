@@ -21,6 +21,7 @@ import '../../widgets/educational/ew_world_map_widget.dart';
 import '../../widgets/educational/antenna_pattern_widget.dart';
 import '../../widgets/educational/link_budget_widget.dart';
 import '../../widgets/educational/gps_warfare_widget.dart';
+import '../../widgets/educational/df_triangulation_widget.dart';
 
 /// หน้าจอแสดงเนื้อหาบทเรียน
 class LessonScreen extends StatefulWidget {
@@ -3909,8 +3910,13 @@ Direction Finding คือการระบุทิศทางที่ส�
 • Multipath จากภูเขา/อาคาร
 • สัญญาณอ่อน = bearing ไม่แม่น
 • เป้าหมายเคลื่อนที่
+
+👇 ลองใช้ DF Triangulation Simulator ด้านล่าง
 ''',
-        visualWidget: _buildTriangulationPracticeWidget(),
+        visualWidget: const SizedBox(
+          height: 750,
+          child: DFTriangulationWidget(),
+        ),
       ),
     ];
   }
@@ -4706,62 +4712,6 @@ J/S = (Pj + Gj - PLj) - (Pt + Gt - PLt)
         painter: _SimpleTriangulationPainter(),
       ),
     ).animate().fadeIn();
-  }
-
-  Widget _buildTriangulationPracticeWidget() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(AppSizes.radiusL),
-        border: Border.all(color: AppColors.esColor.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildStationIndicator('A', 45),
-              _buildStationIndicator('B', 315),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: Colors.red.withValues(alpha: 0.3),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.red, width: 2),
-            ),
-            child: const Icon(Icons.location_on, color: Colors.red),
-          ).animate(onPlay: (c) => c.repeat(reverse: true))
-              .scale(begin: const Offset(0.9, 0.9), end: const Offset(1.1, 1.1), duration: 1.seconds),
-          const SizedBox(height: 8),
-          Text('Target Location', style: AppTextStyles.labelMedium.copyWith(color: Colors.red)),
-        ],
-      ),
-    ).animate().fadeIn();
-  }
-
-  Widget _buildStationIndicator(String label, double bearing) {
-    return Column(
-      children: [
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: AppColors.esColor.withValues(alpha: 0.2),
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Text(label, style: AppTextStyles.titleMedium.copyWith(color: AppColors.esColor)),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text('${bearing.toInt()}°', style: AppTextStyles.labelSmall),
-      ],
-    );
   }
 
   Widget _buildEOBWidget() {
