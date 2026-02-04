@@ -7,9 +7,12 @@ import '../../data/curriculum_data.dart';
 import '../../models/curriculum_models.dart';
 import '../../models/progress_models.dart';
 import '../../services/progress_service.dart';
+import '../interactive/df_sim_screen.dart';
 import '../interactive/jamming_sim_screen.dart';
 import '../interactive/radar_sim_screen.dart';
 import '../interactive/spectrum_sim_screen.dart';
+import '../progress/progress_dashboard_screen.dart';
+import '../teacher/teacher_dashboard_screen.dart';
 import '../learning/flashcard_screen.dart';
 import '../learning/module_lessons_screen.dart';
 import '../quiz/quiz_screen.dart';
@@ -936,6 +939,13 @@ class _SimulationsTab extends StatelessWidget {
         color: AppColors.eaColor,
         screen: const JammingSimScreen(),
       ),
+      _SimulationItem(
+        icon: Icons.gps_fixed,
+        title: 'Direction Finding',
+        subtitle: 'ฝึก Triangulation หาตำแหน่ง',
+        color: AppColors.esColor,
+        screen: const DFSimScreen(),
+      ),
     ];
 
     return SafeArea(
@@ -1207,6 +1217,26 @@ class _ProfileTab extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: AppSizes.paddingM),
+                      _SettingsTile(
+                        icon: Icons.bar_chart,
+                        title: 'สถิติการเรียนละเอียด',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ProgressDashboardScreen(),
+                          ),
+                        ),
+                      ),
+                      _SettingsTile(
+                        icon: Icons.dashboard,
+                        title: 'Dashboard ครู',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const TeacherDashboardScreen(),
+                          ),
+                        ),
+                      ),
                       _SettingsTile(
                         icon: Icons.swap_horiz,
                         title: 'เปลี่ยนระดับ',

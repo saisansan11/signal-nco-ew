@@ -5402,6 +5402,7 @@ J/S = (Pj + Gj - PLj) - (Pt + Gt - PLt)
     );
   }
 
+  // ignore: unused_element
   Widget _buildEWImportanceDiagram() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -5442,6 +5443,7 @@ J/S = (Pj + Gj - PLj) - (Pt + Gt - PLt)
     );
   }
 
+  // ignore: unused_element
   Widget _buildEWHistoryTimeline() {
     return Column(
       children: [
@@ -5587,6 +5589,7 @@ J/S = (Pj + Gj - PLj) - (Pt + Gt - PLt)
     );
   }
 
+  // ignore: unused_element
   Widget _buildESMUsageWidget() {
     return Column(
       children: [
@@ -5773,6 +5776,7 @@ J/S = (Pj + Gj - PLj) - (Pt + Gt - PLt)
     );
   }
 
+  // ignore: unused_element
   Widget _buildECCMTechniquesWidget() {
     return Column(
       children: [

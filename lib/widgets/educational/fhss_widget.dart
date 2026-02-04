@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'dart:math' as math;
 import '../../app/constants.dart';
 
 /// Widget แสดง FHSS (Frequency Hopping) พร้อมอนิเมชั่น
@@ -274,7 +272,6 @@ class _FHSSPainter extends CustomPainter {
       final hopIndex = (progress * hopPattern.length).floor() % hopPattern.length;
       final currentFreq = hopPattern[hopIndex];
       final signalY = size.height * (6 - currentFreq + 0.5) / 7;
-      final signalX = size.width * (progress * hopPattern.length % 1);
 
       // วาดเส้นทางการกระโดด
       final trailPaint = Paint()
