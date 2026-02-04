@@ -42,9 +42,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
     super.initState();
     _initQuiz();
     _setupAnimations();
-    if (widget.config.timeLimitSeconds > 0) {
-      _startTimer();
-    }
+    _startTimer(); // Always start timer to track time spent
   }
 
   void _initQuiz() {
@@ -82,11 +80,15 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
-        if (_secondsRemaining > 0) {
-          _secondsRemaining--;
-          _totalTimeSpent++;
-        } else {
-          _endQuiz();
+        _totalTimeSpent++;
+
+        // Only count down and auto-end if time limit is set
+        if (widget.config.timeLimitSeconds > 0) {
+          if (_secondsRemaining > 0) {
+            _secondsRemaining--;
+          } else {
+            _endQuiz();
+          }
         }
       });
     });
@@ -297,6 +299,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
   }
 
   void _restartQuiz() {
+    _timer?.cancel(); // Cancel existing timer first
     setState(() {
       _initQuiz();
       _currentIndex = 0;
@@ -304,10 +307,8 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
       _hasAnswered = false;
       _showExplanation = false;
       _totalTimeSpent = 0;
-      if (widget.config.timeLimitSeconds > 0) {
-        _startTimer();
-      }
     });
+    _startTimer(); // Always start timer
   }
 
   String _formatTime(int seconds) {
