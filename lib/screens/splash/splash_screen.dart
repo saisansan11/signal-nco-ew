@@ -2,10 +2,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../app/constants.dart';
 import '../onboarding/level_selection_screen.dart';
 import '../home/home_screen.dart';
+import '../auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -96,7 +98,30 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _enterApp() async {
-    // Check if user has selected a level
+    // Check if user is logged in
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) {
+      // Not logged in - go to login screen
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                const LoginScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: animation,
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 500),
+          ),
+        );
+      }
+      return;
+    }
+
+    // User is logged in - check if they have selected a level
     final prefs = await SharedPreferences.getInstance();
     final hasSelectedLevel = prefs.containsKey('user_progress');
 
