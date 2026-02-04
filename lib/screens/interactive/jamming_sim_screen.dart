@@ -1,8 +1,11 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app/constants.dart';
+import '../../widgets/tutorial/tutorial_overlay.dart';
+import '../../widgets/tutorial/simulation_tutorials.dart';
 
 class JammingSimScreen extends StatefulWidget {
   const JammingSimScreen({super.key});
@@ -112,13 +115,28 @@ class _JammingSimScreenState extends State<JammingSimScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('จำลองการรบกวน'),
-        backgroundColor: AppColors.surface,
-      ),
-      body: SafeArea(
+    return TutorialOverlay(
+      tutorialKey: 'jamming_sim',
+      steps: SimulationTutorials.jammingTutorial,
+      primaryColor: AppColors.eaColor,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text('จำลองการรบกวน'),
+          backgroundColor: AppColors.surface,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setBool('tutorial_jamming_sim', false);
+                if (mounted) setState(() {});
+              },
+              tooltip: 'ดูคำแนะนำ',
+            ),
+          ],
+        ),
+        body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             children: [
@@ -455,6 +473,7 @@ class _JammingSimScreenState extends State<JammingSimScreen>
           ),
         ),
       ),
+    ),
     );
   }
 }

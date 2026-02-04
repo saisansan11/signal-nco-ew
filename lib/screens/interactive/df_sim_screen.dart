@@ -1,8 +1,11 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app/constants.dart';
+import '../../widgets/tutorial/tutorial_overlay.dart';
+import '../../widgets/tutorial/simulation_tutorials.dart';
 
 /// Direction Finding (DF) Simulation Screen
 /// จำลองการหาทิศทางแหล่งกำเนิดสัญญาณด้วย Triangulation
@@ -173,25 +176,38 @@ class _DFSimScreenState extends State<DFSimScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Direction Finding Simulation'),
-        backgroundColor: AppColors.surface,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Center(
-              child: Text(
-                'รอบ $_round/5 | คะแนน: $_score',
-                style: AppTextStyles.titleMedium.copyWith(
-                  color: AppColors.esColor,
+    return TutorialOverlay(
+      tutorialKey: 'df_sim',
+      steps: SimulationTutorials.dfTutorial,
+      primaryColor: AppColors.warning,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text('Direction Finding Simulation'),
+          backgroundColor: AppColors.surface,
+          actions: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Center(
+                child: Text(
+                  'รอบ $_round/5 | คะแนน: $_score',
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: AppColors.esColor,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setBool('tutorial_df_sim', false);
+                if (mounted) setState(() {});
+              },
+              tooltip: 'ดูคำแนะนำ',
+            ),
+          ],
+        ),
       body: Column(
         children: [
           // Instructions
@@ -342,6 +358,7 @@ class _DFSimScreenState extends State<DFSimScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 }

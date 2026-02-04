@@ -1,8 +1,11 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app/constants.dart';
+import '../../widgets/tutorial/tutorial_overlay.dart';
+import '../../widgets/tutorial/simulation_tutorials.dart';
 
 class RadarSimScreen extends StatefulWidget {
   const RadarSimScreen({super.key});
@@ -180,13 +183,28 @@ class _RadarSimScreenState extends State<RadarSimScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('จำลองเรดาร์'),
-        backgroundColor: AppColors.surface,
-      ),
-      body: SafeArea(
+    return TutorialOverlay(
+      tutorialKey: 'radar_sim',
+      steps: SimulationTutorials.radarTutorial,
+      primaryColor: AppColors.radarColor,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text('จำลองเรดาร์'),
+          backgroundColor: AppColors.surface,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setBool('tutorial_radar_sim', false);
+                if (mounted) setState(() {});
+              },
+              tooltip: 'ดูคำแนะนำ',
+            ),
+          ],
+        ),
+        body: SafeArea(
         child: Column(
           children: [
             // Info bar
@@ -293,6 +311,7 @@ class _RadarSimScreenState extends State<RadarSimScreen>
           ],
         ),
       ),
+    ),
     );
   }
 }

@@ -1,8 +1,11 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app/constants.dart';
+import '../../widgets/tutorial/tutorial_overlay.dart';
+import '../../widgets/tutorial/simulation_tutorials.dart';
 
 class SpectrumSimScreen extends StatefulWidget {
   const SpectrumSimScreen({super.key});
@@ -160,20 +163,33 @@ class _SpectrumSimScreenState extends State<SpectrumSimScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('วิเคราะห์สเปกตรัม'),
-        backgroundColor: AppColors.surface,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _resetSimulation,
-            tooltip: 'รีเซ็ต',
-          ),
-        ],
-      ),
-      body: SafeArea(
+    return TutorialOverlay(
+      tutorialKey: 'spectrum_sim',
+      steps: SimulationTutorials.spectrumTutorial,
+      primaryColor: AppColors.esColor,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text('วิเคราะห์สเปกตรัม'),
+          backgroundColor: AppColors.surface,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setBool('tutorial_spectrum_sim', false);
+                if (mounted) setState(() {});
+              },
+              tooltip: 'ดูคำแนะนำ',
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _resetSimulation,
+              tooltip: 'รีเซ็ต',
+            ),
+          ],
+        ),
+        body: SafeArea(
         child: Column(
           children: [
             // Info bar
@@ -419,6 +435,7 @@ class _SpectrumSimScreenState extends State<SpectrumSimScreen>
           ],
         ),
       ),
+    ),
     );
   }
 
