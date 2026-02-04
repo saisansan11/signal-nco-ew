@@ -3,8 +3,12 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/constants.dart';
+import '../../models/curriculum_models.dart';
 import '../../models/progress_models.dart';
+import '../../services/auth_service.dart';
 import '../../services/progress_service.dart';
+import '../progress/progress_dashboard_screen.dart';
+import '../teacher/teacher_dashboard_screen.dart';
 
 /// Profile Screen - User-friendly for all ages
 /// Features: Greeting, Daily Goals, Achievements, Quick Actions, Settings
@@ -244,46 +248,393 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildSettingsSection(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(AppSizes.radiusL),
-        border: Border.all(
-          color: AppColors.border,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'ตั้งค่า',
+          style: AppTextStyles.titleMedium.copyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-      ),
-      child: Column(
-        children: [
-          _SettingsTile(
-            icon: Icons.notifications_outlined,
-            title: 'การแจ้งเตือน',
-            subtitle: 'ตั้งค่าการแจ้งเตือนประจำวัน',
-            onTap: () {},
+        const SizedBox(height: 12),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(AppSizes.radiusL),
+            border: Border.all(
+              color: AppColors.border,
+            ),
           ),
-          const Divider(height: 1, indent: 56),
-          _SettingsTile(
-            icon: Icons.color_lens_outlined,
-            title: 'ธีม',
-            subtitle: 'โหมดมืด',
-            onTap: () {},
+          child: Column(
+            children: [
+              // สถิติการเรียนละเอียด
+              _SettingsTile(
+                icon: Icons.bar_chart,
+                title: 'สถิติการเรียนละเอียด',
+                subtitle: 'ดูความก้าวหน้าทั้งหมด',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ProgressDashboardScreen(),
+                  ),
+                ),
+              ),
+              const Divider(height: 1, indent: 56),
+
+              // Dashboard ครู - แสดงเฉพาะครูเท่านั้น
+              FutureBuilder<bool>(
+                future: AuthService().isCurrentUserTeacher(),
+                builder: (context, snapshot) {
+                  if (snapshot.data == true) {
+                    return Column(
+                      children: [
+                        _SettingsTile(
+                          icon: Icons.dashboard,
+                          title: 'Dashboard ครู',
+                          subtitle: 'ดูข้อมูลนักเรียนทั้งหมด',
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const TeacherDashboardScreen(),
+                            ),
+                          ),
+                        ),
+                        const Divider(height: 1, indent: 56),
+                      ],
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+
+              // เปลี่ยนระดับ
+              _SettingsTile(
+                icon: Icons.swap_horiz,
+                title: 'เปลี่ยนระดับ',
+                subtitle: 'สลับระหว่างนายสิบชั้นต้น/อาวุโส',
+                onTap: () => _showLevelChangeDialog(context),
+              ),
+              const Divider(height: 1, indent: 56),
+
+              // รีเซ็ตความก้าวหน้า
+              _SettingsTile(
+                icon: Icons.refresh,
+                title: 'รีเซ็ตความก้าวหน้า',
+                subtitle: 'เริ่มต้นใหม่ทั้งหมด',
+                onTap: () => _showResetDialog(context),
+              ),
+              const Divider(height: 1, indent: 56),
+
+              _SettingsTile(
+                icon: Icons.info_outline,
+                title: 'เกี่ยวกับแอป',
+                subtitle: 'เวอร์ชัน 1.0.0',
+                onTap: () => _showAboutDialog(context),
+              ),
+            ],
           ),
-          const Divider(height: 1, indent: 56),
-          _SettingsTile(
-            icon: Icons.language,
-            title: 'ภาษา',
-            subtitle: 'ไทย',
-            onTap: () {},
+        ),
+      ],
+    ).animate().fadeIn(duration: 400.ms, delay: 300.ms);
+  }
+
+  void _showLevelChangeDialog(BuildContext context) {
+    final progressService = Provider.of<ProgressService>(context, listen: false);
+    final currentLevel = progressService.currentLevel;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusL),
+        ),
+        title: Text(
+          'เปลี่ยนระดับ',
+          style: AppTextStyles.titleLarge.copyWith(
+            color: AppColors.textPrimary,
           ),
-          const Divider(height: 1, indent: 56),
-          _SettingsTile(
-            icon: Icons.info_outline,
-            title: 'เกี่ยวกับแอป',
-            subtitle: 'เวอร์ชัน 1.0.0',
-            onTap: () {},
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'เลือกระดับที่ต้องการศึกษา',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _LevelOption(
+              title: 'นายสิบชั้นต้น',
+              subtitle: 'พื้นฐาน EW สำหรับผู้เริ่มต้น',
+              isSelected: currentLevel == NCOLevel.junior,
+              color: AppColors.juniorNco,
+              onTap: () {
+                progressService.setNCOLevel(NCOLevel.junior);
+                Navigator.pop(context);
+              },
+            ),
+            const SizedBox(height: 12),
+            _LevelOption(
+              title: 'นายสิบอาวุโส',
+              subtitle: 'เนื้อหาขั้นสูงสำหรับผู้มีประสบการณ์',
+              isSelected: currentLevel == NCOLevel.senior,
+              color: AppColors.seniorNco,
+              onTap: () {
+                progressService.setNCOLevel(NCOLevel.senior);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'ยกเลิก',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
         ],
       ),
-    ).animate().fadeIn(duration: 400.ms, delay: 300.ms);
+    );
+  }
+
+  void _showResetDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusL),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber, color: AppColors.warning),
+            const SizedBox(width: 8),
+            Text(
+              'รีเซ็ตความก้าวหน้า',
+              style: AppTextStyles.titleLarge.copyWith(
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'การดำเนินการนี้จะลบข้อมูลความก้าวหน้าทั้งหมด รวมถึง:\n\n'
+          '• บทเรียนที่เรียนไปแล้ว\n'
+          '• คะแนนแบบทดสอบ\n'
+          '• XP และ Streak\n'
+          '• ความสำเร็จที่ได้รับ\n\n'
+          'คุณแน่ใจหรือไม่?',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'ยกเลิก',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Provider.of<ProgressService>(context, listen: false).resetProgress();
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('รีเซ็ตความก้าวหน้าเรียบร้อยแล้ว'),
+                  backgroundColor: AppColors.success,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            child: const Text('รีเซ็ต', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAboutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusL),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.radar, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Signal NCO EW',
+              style: AppTextStyles.titleLarge.copyWith(
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'แอปพลิเคชันฝึกอบรมสงครามอิเล็กทรอนิกส์\nสำหรับนายสิบเหล่าทหารสื่อสาร',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _AboutItem(label: 'เวอร์ชัน', value: '1.0.0'),
+            _AboutItem(label: 'พัฒนาโดย', value: 'Signal School'),
+            _AboutItem(label: 'ติดต่อ', value: 'support@signalschool.ac.th'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'ปิด',
+              style: TextStyle(color: AppColors.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LevelOption extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool isSelected;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _LevelOption({
+    required this.title,
+    required this.subtitle,
+    required this.isSelected,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSizes.radiusM),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withValues(alpha: 0.2) : AppColors.surface,
+            borderRadius: BorderRadius.circular(AppSizes.radiusM),
+            border: Border.all(
+              color: isSelected ? color : AppColors.border,
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.military_tech,
+                  color: color,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTextStyles.titleSmall.copyWith(
+                        color: isSelected ? color : AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isSelected)
+                Icon(Icons.check_circle, color: color, size: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AboutItem extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _AboutItem({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textMuted,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
