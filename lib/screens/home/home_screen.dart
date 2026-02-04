@@ -11,6 +11,7 @@ import '../interactive/df_sim_screen.dart';
 import '../interactive/jamming_sim_screen.dart';
 import '../interactive/radar_sim_screen.dart';
 import '../interactive/spectrum_sim_screen.dart';
+import '../learning/ew_history_map_screen.dart';
 import '../learning/flashcard_screen.dart';
 import '../learning/module_lessons_screen.dart';
 import '../profile/profile_screen.dart';
@@ -321,6 +322,86 @@ class _DashboardTab extends StatelessWidget {
                     ),
                   ],
                 ).animate(delay: 500.ms).fadeIn(duration: 500.ms),
+
+                const SizedBox(height: AppSizes.paddingM),
+
+                // World Map - quick access
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const EWHistoryMapScreen(),
+                    ),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSizes.paddingM),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.esColor.withAlpha(40),
+                          AppColors.eaColor.withAlpha(30),
+                          AppColors.epColor.withAlpha(40),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(AppSizes.radiusL),
+                      border: Border.all(
+                        color: AppColors.esColor.withAlpha(60),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: AppColors.esColor.withAlpha(50),
+                            borderRadius: BorderRadius.circular(AppSizes.radiusM),
+                          ),
+                          child: const Icon(
+                            Icons.public,
+                            color: AppColors.esColor,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: AppSizes.paddingM),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '🗺️ แผนที่ประวัติศาสตร์ EW',
+                                style: AppTextStyles.titleMedium.copyWith(
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'สำรวจเหตุการณ์สำคัญจากทั่วโลก',
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.esColor,
+                            borderRadius: BorderRadius.circular(AppSizes.radiusM),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_forward,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ).animate(delay: 600.ms).fadeIn(duration: 500.ms).slideY(begin: 0.1, end: 0),
 
                 const SizedBox(height: AppSizes.paddingXL),
 

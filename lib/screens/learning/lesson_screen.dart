@@ -18,6 +18,9 @@ import '../../widgets/educational/signal_waveform_widget.dart';
 import '../../widgets/educational/memory_helper_widget.dart';
 import '../../widgets/educational/radar_equation_widget.dart';
 import '../../widgets/educational/ew_world_map_widget.dart';
+import '../../widgets/educational/antenna_pattern_widget.dart';
+import '../../widgets/educational/link_budget_widget.dart';
+import '../../widgets/educational/gps_warfare_widget.dart';
 
 /// หน้าจอแสดงเนื้อหาบทเรียน
 class LessonScreen extends StatefulWidget {
@@ -3442,6 +3445,60 @@ SINCGARS = Single Channel Ground and Airborne Radio System
 ''',
         visualWidget: _buildRadioSetupWidget(),
       ),
+      LessonPage(
+        title: 'รูปแบบการแผ่คลื่นเสาอากาศ',
+        content: '''
+เสาอากาศแต่ละประเภทมีรูปแบบการแผ่คลื่นต่างกัน:
+
+📡 Omnidirectional (รอบทิศ)
+• แผ่คลื่น 360° รอบตัว
+• Gain ต่ำ แต่ครอบคลุมทั่ว
+• ใช้ในวิทยุมือถือ
+
+📡 Directional (ทิศทาง)
+• แผ่คลื่นในทิศทางเดียว
+• Gain สูง ระยะไกล
+• ต้องหันเสาอากาศให้ถูก
+
+📡 Yagi-Uda
+• เสาทิศทางยอดนิยม
+• มี Front-to-Back ratio ดี
+• ใช้ในสถานีฐาน
+
+ลองปรับค่าและดูรูปแบบการแผ่คลื่น:
+''',
+        visualWidget: const AntennaPatternWidget(),
+      ),
+      LessonPage(
+        title: 'Link Budget - สมดุลสัญญาณ',
+        content: '''
+Link Budget คือการคำนวณว่าสัญญาณจะไปถึงปลายทางได้หรือไม่
+
+สูตรพื้นฐาน:
+Received Power = EIRP - Path Loss + Rx Gain - Losses
+
+องค์ประกอบสำคัญ:
+
+📤 ภาคส่ง (Transmitter)
+• TX Power: กำลังส่ง
+• TX Gain: Gain เสาอากาศ
+• TX Loss: Loss สายนำสัญญาณ
+
+📉 เส้นทาง (Path)
+• FSPL: Free Space Path Loss
+• ขึ้นกับระยะและความถี่
+• Loss อื่นๆ: ฝน, สิ่งกีดขวาง
+
+📥 ภาครับ (Receiver)
+• RX Gain: Gain เสาอากาศ
+• RX Loss: Loss สายนำสัญญาณ
+• Sensitivity: ความไวรับ
+
+⚡ Link Margin = Received Power - Sensitivity
+ถ้า > 0 = สัญญาณถึง!
+''',
+        visualWidget: const LinkBudgetWidget(),
+      ),
     ];
   }
 
@@ -4363,8 +4420,14 @@ J/S = (Pj + Gj - PLj) - (Pt + Gt - PLt)
 • Time error
 • Receiver warning
 • Cross-check ล้มเหลว
+
+👆 ลองใช้ GPS Warfare Simulator ด้านล่าง
+เพื่อเห็นผลกระทบของ Jamming และ Spoofing
 ''',
-        visualWidget: _buildGPSThreatsWidget(),
+        visualWidget: const SizedBox(
+          height: 650,
+          child: GPSWarfareWidget(),
+        ),
       ),
     ];
   }
@@ -5187,48 +5250,6 @@ J/S = (Pj + Gj - PLj) - (Pt + Gt - PLt)
         border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(label, style: AppTextStyles.labelSmall.copyWith(color: color)),
-    );
-  }
-
-  Widget _buildGPSThreatsWidget() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppSizes.radiusL),
-        border: Border.all(color: AppColors.gpsColor.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.satellite_alt, size: 48, color: AppColors.gpsColor),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildThreatBox('Jamming', 'No Signal', Colors.red),
-              _buildThreatBox('Spoofing', 'Wrong Pos', Colors.orange),
-            ],
-          ),
-        ],
-      ),
-    ).animate().fadeIn();
-  }
-
-  Widget _buildThreatBox(String title, String effect, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
-      ),
-      child: Column(
-        children: [
-          Text(title, style: AppTextStyles.labelMedium.copyWith(color: color)),
-          const SizedBox(height: 4),
-          Text(effect, style: AppTextStyles.labelSmall.copyWith(color: AppColors.textMuted)),
-        ],
-      ),
     );
   }
 
