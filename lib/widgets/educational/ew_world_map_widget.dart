@@ -437,12 +437,17 @@ class _EWWorldMapWidgetState extends State<EWWorldMapWidget>
         // ESRI World Imagery - Free satellite tiles
         return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
       case MapStyle.dark:
-        // CartoDB Dark Matter - Free dark theme
-        return 'https://cartodb-basemaps-a.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png';
+        // CartoDB Dark Matter - reliable dark theme (no API key needed)
+        return 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png';
       case MapStyle.terrain:
-        // OpenTopoMap - Free terrain map
-        return 'https://tile.opentopomap.org/{z}/{x}/{y}.png';
+        // OpenStreetMap - most reliable, works everywhere
+        return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
     }
+  }
+
+  String get _tileUrlFallback {
+    // Fallback to OpenStreetMap if primary fails
+    return 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
   }
 
   void _flyToEvent(int index) {
@@ -519,11 +524,15 @@ class _EWWorldMapWidgetState extends State<EWWorldMapWidget>
                       },
                     ),
                     children: [
-                      // Tile Layer
+                      // Tile Layer with fallback
                       TileLayer(
                         urlTemplate: _tileUrl,
+                        fallbackUrl: _tileUrlFallback,
                         userAgentPackageName: 'com.signalschool.signal_nco_ew',
                         maxZoom: 19,
+                        errorTileCallback: (tile, error, stackTrace) {
+                          debugPrint('Tile error: $error');
+                        },
                       ),
 
                       // Connection lines between events
