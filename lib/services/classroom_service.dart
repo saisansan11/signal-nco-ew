@@ -74,25 +74,35 @@ class ClassroomService {
     return Classroom.fromFirestore(query.docs.first);
   }
 
-  /// Get all classrooms for a teacher
+  /// Get all classrooms for a teacher (simplified query - no composite index needed)
   Stream<List<Classroom>> getTeacherClassrooms(String teacherId) {
     return _classroomsRef
         .where('teacherId', isEqualTo: teacherId)
-        .where('isActive', isEqualTo: true)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => Classroom.fromFirestore(doc)).toList());
+        .map((snapshot) {
+      final classrooms = snapshot.docs
+          .map((doc) => Classroom.fromFirestore(doc))
+          .where((c) => c.isActive) // Filter on client
+          .toList();
+      // Sort on client side (newest first)
+      classrooms.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return classrooms;
+    });
   }
 
-  /// Get all classrooms a student is enrolled in
+  /// Get all classrooms a student is enrolled in (simplified query)
   Stream<List<Classroom>> getStudentClassrooms(String studentUid) {
     return _classroomsRef
         .where('studentUids', arrayContains: studentUid)
-        .where('isActive', isEqualTo: true)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => Classroom.fromFirestore(doc)).toList());
+        .map((snapshot) {
+      final classrooms = snapshot.docs
+          .map((doc) => Classroom.fromFirestore(doc))
+          .where((c) => c.isActive) // Filter on client
+          .toList();
+      classrooms.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return classrooms;
+    });
   }
 
   // ============== Student Management ==============
@@ -174,14 +184,19 @@ class ClassroomService {
     await _assignmentsRef.doc(assignmentId).delete();
   }
 
-  /// Get all assignments for a classroom
+  /// Get all assignments for a classroom (simplified - sort on client)
   Stream<List<Assignment>> getClassroomAssignments(String classroomId) {
     return _assignmentsRef
         .where('classroomId', isEqualTo: classroomId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => Assignment.fromFirestore(doc)).toList());
+        .map((snapshot) {
+      final assignments = snapshot.docs
+          .map((doc) => Assignment.fromFirestore(doc))
+          .toList();
+      // Sort on client side (newest first)
+      assignments.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return assignments;
+    });
   }
 
   /// Get pending assignments for a student in a classroom

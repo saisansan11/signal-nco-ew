@@ -296,68 +296,251 @@ class _OverviewTab extends StatelessWidget {
   }
 }
 
-// Students Tab
-class _StudentsTab extends StatelessWidget {
+// Students Tab - Converted to StatefulWidget for refresh capability
+class _StudentsTab extends StatefulWidget {
   final Classroom classroom;
 
   const _StudentsTab({required this.classroom});
 
   @override
+  State<_StudentsTab> createState() => _StudentsTabState();
+}
+
+class _StudentsTabState extends State<_StudentsTab> {
+  final ClassroomService _classroomService = ClassroomService();
+  List<Map<String, dynamic>> _students = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStudents();
+  }
+
+  Future<void> _loadStudents() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final students = await _classroomService.getClassroomStudents(widget.classroom.id);
+      if (mounted) {
+        setState(() {
+          _students = students;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final classroomService = ClassroomService();
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.cyan),
+      );
+    }
 
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: classroomService.getClassroomStudents(classroom.id),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: Colors.cyan),
-          );
-        }
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                'ไม่สามารถโหลดรายชื่อนักเรียนได้',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _loadStudents,
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.cyan),
+                icon: const Icon(Icons.refresh),
+                label: const Text('ลองใหม่'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
-        final students = snapshot.data ?? [];
+    if (_students.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _loadStudents,
+        color: Colors.cyan,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.6,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.people_outline,
+                      size: 64,
+                      color: Colors.white.withValues(alpha: 0.3),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'ยังไม่มีนักเรียน',
+                      style: TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'แจ้งรหัส ${widget.classroom.code} ให้นักเรียน',
+                      style: const TextStyle(color: Colors.white54),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () => _showInviteCode(context),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.cyan),
+                      icon: const Icon(Icons.share),
+                      label: const Text('แชร์รหัสเข้าร่วม'),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'ดึงลงเพื่อรีเฟรช',
+                      style: TextStyle(color: Colors.white38, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
-        if (students.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+    return RefreshIndicator(
+      onRefresh: _loadStudents,
+      color: Colors.cyan,
+      child: Column(
+        children: [
+          // Header with student count
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            color: const Color(0xFF1a1a2e),
+            child: Row(
               children: [
-                Icon(
-                  Icons.people_outline,
-                  size: 64,
-                  color: Colors.white.withValues(alpha: 0.3),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'ยังไม่มีนักเรียน',
-                  style: TextStyle(color: Colors.white, fontSize: 18),
-                ),
-                const SizedBox(height: 8),
+                Icon(Icons.people, color: Colors.cyan, size: 20),
+                const SizedBox(width: 8),
                 Text(
-                  'แจ้งรหัส ${classroom.code} ให้นักเรียน',
-                  style: const TextStyle(color: Colors.white54),
+                  'นักเรียน ${_students.length} คน',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: _loadStudents,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const Text('รีเฟรช'),
+                  style: TextButton.styleFrom(foregroundColor: Colors.cyan),
                 ),
               ],
             ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: students.length,
-          itemBuilder: (context, index) {
-            final student = students[index];
-            return _StudentCard(
-              student: student,
-              onRemove: () => _removeStudent(context, student['uid']),
-            );
-          },
-        );
-      },
+          ),
+          // Student list
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _students.length,
+              itemBuilder: (context, index) {
+                final student = _students[index];
+                return _StudentCard(
+                  student: student,
+                  onRemove: () => _removeStudent(student['uid']),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Future<void> _removeStudent(BuildContext context, String studentUid) async {
+  void _showInviteCode(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1a1a2e),
+        title: const Text('รหัสเข้าร่วมห้องเรียน', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              decoration: BoxDecoration(
+                color: Colors.cyan.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                widget.classroom.code,
+                style: const TextStyle(
+                  color: Colors.cyan,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'monospace',
+                  letterSpacing: 4,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'แจ้งรหัสนี้ให้นักเรียนใช้ในเมนู "เข้าร่วมห้องเรียน"',
+              style: TextStyle(color: Colors.white54, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: widget.classroom.code));
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('คัดลอกรหัสแล้ว'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            child: const Text('คัดลอก'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.cyan),
+            child: const Text('ปิด'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _removeStudent(String studentUid) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -381,21 +564,26 @@ class _StudentsTab extends StatelessWidget {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
+    if (confirmed == true && mounted) {
       try {
-        await ClassroomService().removeStudent(classroom.id, studentUid);
-        if (context.mounted) {
+        await _classroomService.removeStudent(widget.classroom.id, studentUid);
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('ลบนักเรียนแล้ว'),
               backgroundColor: Colors.green,
             ),
           );
+          // Refresh the list after removing a student
+          _loadStudents();
         }
       } catch (e) {
-        if (context.mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('เกิดข้อผิดพลาด: $e'), backgroundColor: Colors.red),
+            SnackBar(
+              content: Text('เกิดข้อผิดพลาด: $e'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       }

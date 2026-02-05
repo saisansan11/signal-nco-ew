@@ -56,16 +56,32 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
 
           if (snapshot.hasError) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                  const SizedBox(height: 16),
-                  Text(
-                    'เกิดข้อผิดพลาด: ${snapshot.error}',
-                    style: const TextStyle(color: Colors.white70),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'ไม่สามารถโหลดข้อมูลได้',
+                      style: TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${snapshot.error}',
+                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => setState(() {}),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.cyan),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('ลองใหม่'),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -107,7 +123,7 @@ class _ClassroomScreenState extends State<ClassroomScreen> {
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.cyan.withOpacity(0.1),
+              color: Colors.cyan.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -246,7 +262,7 @@ class _ClassroomCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: classroom.isActive ? Colors.cyan.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
+          color: classroom.isActive ? Colors.cyan.withValues(alpha: 0.3) : Colors.grey.withValues(alpha: 0.3),
         ),
       ),
       child: InkWell(
@@ -262,7 +278,7 @@ class _ClassroomCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.cyan.withOpacity(0.1),
+                      color: Colors.cyan.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -335,9 +351,9 @@ class _ClassroomCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.cyan.withOpacity(0.1),
+                  color: Colors.cyan.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.cyan.withOpacity(0.3)),
+                  border: Border.all(color: Colors.cyan.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
