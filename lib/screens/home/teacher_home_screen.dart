@@ -7,8 +7,20 @@ import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../app/constants.dart';
+import '../../data/curriculum_data.dart';
+import '../../models/curriculum_models.dart';
 import '../../services/user_role_service.dart';
+import '../interactive/df_sim_screen.dart';
+import '../interactive/jamming_sim_screen.dart';
+import '../interactive/radar_sim_screen.dart';
+import '../interactive/spectrum_sim_screen.dart';
+import '../learning/ew_history_map_screen.dart';
+import '../learning/flashcard_screen.dart';
+import '../learning/module_lessons_screen.dart';
 import '../profile/profile_screen.dart';
+import '../quiz/quiz_screen.dart';
+import '../campaign/campaign_screen.dart';
+import '../teacher/student_detail_screen.dart';
 
 class TeacherHomeScreen extends StatefulWidget {
   const TeacherHomeScreen({super.key});
@@ -28,6 +40,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
         index: _currentIndex,
         children: const [
           _TeacherDashboardTab(),
+          _ContentTab(),
           _StudentsTab(),
           _LeaderboardTab(),
           _TeacherProfileTab(),
@@ -48,7 +61,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(
-            horizontal: AppSizes.paddingM,
+            horizontal: AppSizes.paddingS,
             vertical: AppSizes.paddingS,
           ),
           child: Row(
@@ -56,27 +69,33 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
             children: [
               _NavItem(
                 icon: Icons.dashboard_rounded,
-                label: 'Dashboard',
+                label: 'หน้าหลัก',
                 isSelected: _currentIndex == 0,
                 onTap: () => setState(() => _currentIndex = 0),
               ),
               _NavItem(
-                icon: Icons.people_rounded,
-                label: 'นักเรียน',
+                icon: Icons.school_rounded,
+                label: 'เนื้อหา',
                 isSelected: _currentIndex == 1,
                 onTap: () => setState(() => _currentIndex = 1),
               ),
               _NavItem(
-                icon: Icons.leaderboard_rounded,
-                label: 'อันดับ',
+                icon: Icons.people_rounded,
+                label: 'นักเรียน',
                 isSelected: _currentIndex == 2,
                 onTap: () => setState(() => _currentIndex = 2),
               ),
               _NavItem(
-                icon: Icons.person_rounded,
-                label: 'โปรไฟล์',
+                icon: Icons.leaderboard_rounded,
+                label: 'อันดับ',
                 isSelected: _currentIndex == 3,
                 onTap: () => setState(() => _currentIndex = 3),
+              ),
+              _NavItem(
+                icon: Icons.person_rounded,
+                label: 'โปรไฟล์',
+                isSelected: _currentIndex == 4,
+                onTap: () => setState(() => _currentIndex = 4),
               ),
             ],
           ),
@@ -591,11 +610,13 @@ class _StudentsTab extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: students.length,
                   itemBuilder: (context, index) {
-                    final student =
-                        students[index].data() as Map<String, dynamic>;
-                    return _StudentCard(student: student, rank: index + 1)
-                        .animate()
-                        .fadeIn(delay: (index * 50).ms);
+                    final doc = students[index];
+                    final student = doc.data() as Map<String, dynamic>;
+                    return _StudentCard(
+                      student: student,
+                      rank: index + 1,
+                      studentUid: doc.id,
+                    ).animate().fadeIn(delay: (index * 50).ms);
                   },
                 );
               },
@@ -610,8 +631,13 @@ class _StudentsTab extends StatelessWidget {
 class _StudentCard extends StatelessWidget {
   final Map<String, dynamic> student;
   final int rank;
+  final String? studentUid;
 
-  const _StudentCard({required this.student, required this.rank});
+  const _StudentCard({
+    required this.student,
+    required this.rank,
+    this.studentUid,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -621,14 +647,28 @@ class _StudentCard extends StatelessWidget {
     final level = (totalXP / 100).floor() + 1;
     final streak = (student['currentStreak'] as int?) ?? 0;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(AppSizes.radiusM),
-        border: Border.all(color: AppColors.border),
-      ),
+    return GestureDetector(
+      onTap: () {
+        if (studentUid != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => StudentDetailScreen(
+                studentUid: studentUid!,
+                studentName: name,
+              ),
+            ),
+          );
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(AppSizes.radiusM),
+          border: Border.all(color: AppColors.border),
+        ),
       child: Row(
         children: [
           // Rank badge
@@ -721,6 +761,7 @@ class _StudentCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
       ),
     );
   }
@@ -881,5 +922,512 @@ class _TeacherProfileTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const ProfileScreen();
+  }
+}
+
+// Content Tab - เนื้อหาบทเรียนและจำลอง (สำหรับครูดูตรวจสอบ)
+class _ContentTab extends StatelessWidget {
+  const _ContentTab();
+
+  @override
+  Widget build(BuildContext context) {
+    // ครูเห็นเนื้อหาทั้งหมด (ทั้งชั้นต้นและอาวุโส)
+    final allModules = CurriculumData.allModules;
+
+    return SafeArea(
+      child: CustomScrollView(
+        slivers: [
+          // Header
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSizes.paddingM),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.school, color: AppColors.seniorNco, size: 28),
+                      const SizedBox(width: 12),
+                      Text(
+                        'เนื้อหาทั้งหมด',
+                        style: AppTextStyles.headlineMedium.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'ดูเนื้อหาเหมือนที่นักเรียนเห็น • ${allModules.length} โมดูล',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(duration: 300.ms),
+          ),
+
+          // Quick Actions - Simulations & Tools
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSizes.paddingM),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'เครื่องมือจำลอง',
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _SimCard(
+                          icon: Icons.waves,
+                          title: 'Spectrum',
+                          color: AppColors.esColor,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SpectrumSimScreen(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        _SimCard(
+                          icon: Icons.radar,
+                          title: 'Radar',
+                          color: AppColors.radarColor,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const RadarSimScreen(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        _SimCard(
+                          icon: Icons.wifi_tethering_off,
+                          title: 'Jamming',
+                          color: AppColors.eaColor,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const JammingSimScreen(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        _SimCard(
+                          icon: Icons.explore,
+                          title: 'DF',
+                          color: AppColors.epColor,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const DFSimScreen(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        _SimCard(
+                          icon: Icons.public,
+                          title: 'แผนที่ EW',
+                          color: AppColors.info,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const EWHistoryMapScreen(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        _SimCard(
+                          icon: Icons.military_tech,
+                          title: 'Campaign',
+                          color: AppColors.warning,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CampaignScreen(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'บทเรียนทั้งหมด',
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ).animate(delay: 100.ms).fadeIn(duration: 300.ms),
+          ),
+
+          // Module List
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSizes.paddingM),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final module = allModules[index];
+                  return _TeacherModuleCard(
+                    module: module,
+                    index: index,
+                  ).animate(delay: Duration(milliseconds: 50 * index))
+                      .fadeIn(duration: 200.ms)
+                      .slideX(begin: 0.05, end: 0);
+                },
+                childCount: allModules.length,
+              ),
+            ),
+          ),
+
+          const SliverPadding(padding: EdgeInsets.only(bottom: 24)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SimCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _SimCard({
+    required this.icon,
+    required this.title,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 80,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withAlpha(20),
+          borderRadius: BorderRadius.circular(AppSizes.radiusM),
+          border: Border.all(color: color.withAlpha(50)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 6),
+            Text(
+              title,
+              style: AppTextStyles.labelSmall.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TeacherModuleCard extends StatelessWidget {
+  final EWModule module;
+  final int index;
+
+  const _TeacherModuleCard({
+    required this.module,
+    required this.index,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSizes.paddingS),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _showModuleOptions(context),
+          borderRadius: BorderRadius.circular(AppSizes.radiusM),
+          child: Container(
+            padding: const EdgeInsets.all(AppSizes.paddingM),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(AppSizes.radiusM),
+              border: Border.all(
+                color: module.category.color.withAlpha(40),
+              ),
+            ),
+            child: Row(
+              children: [
+                // Module number
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: module.category.color.withAlpha(30),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${index + 1}',
+                      style: AppTextStyles.titleMedium.copyWith(
+                        color: module.category.color,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Module info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        module.titleTh,
+                        style: AppTextStyles.titleSmall.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(
+                            module.category.icon,
+                            size: 12,
+                            color: module.category.color,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            module.category.titleTh,
+                            style: AppTextStyles.labelSmall.copyWith(
+                              color: module.category.color,
+                              fontSize: 10,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.timer_outlined,
+                            size: 12,
+                            color: AppColors.textMuted,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            '${module.estimatedMinutes} นาที',
+                            style: AppTextStyles.labelSmall.copyWith(
+                              fontSize: 10,
+                            ),
+                          ),
+                          // Level badge
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: module.requiredLevel == NCOLevel.junior
+                                  ? AppColors.juniorNco.withAlpha(30)
+                                  : AppColors.seniorNco.withAlpha(30),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              module.requiredLevel == NCOLevel.junior ? 'ชั้นต้น' : 'อาวุโส',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: module.requiredLevel == NCOLevel.junior
+                                    ? AppColors.juniorNco
+                                    : AppColors.seniorNco,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: AppColors.textMuted,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showModuleOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSizes.radiusXL),
+        ),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(AppSizes.paddingL),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: module.category.color.withAlpha(30),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    module.category.icon,
+                    color: module.category.color,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        module.titleTh,
+                        style: AppTextStyles.titleLarge.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        module.subtitleTh,
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSizes.paddingL),
+            _OptionTile(
+              icon: Icons.menu_book,
+              title: 'ดูบทเรียน',
+              subtitle: 'เนื้อหาที่นักเรียนจะเห็น',
+              color: AppColors.primary,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ModuleLessonsScreen(module: module),
+                  ),
+                );
+              },
+            ),
+            _OptionTile(
+              icon: Icons.style,
+              title: 'บัตรคำ',
+              subtitle: 'Flashcards ในหมวดนี้',
+              color: AppColors.esColor,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => FlashcardScreen(
+                      filterCategory: module.category,
+                    ),
+                  ),
+                );
+              },
+            ),
+            _OptionTile(
+              icon: Icons.quiz,
+              title: 'แบบทดสอบ',
+              subtitle: 'ทดลองทำแบบทดสอบ',
+              color: AppColors.eaColor,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => QuizScreen(category: module.category),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: AppSizes.paddingM),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OptionTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _OptionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      onTap: onTap,
+      contentPadding: EdgeInsets.zero,
+      leading: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: color.withAlpha(30),
+          borderRadius: BorderRadius.circular(AppSizes.radiusM),
+        ),
+        child: Icon(icon, color: color),
+      ),
+      title: Text(
+        title,
+        style: AppTextStyles.titleMedium.copyWith(
+          color: AppColors.textPrimary,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: AppTextStyles.bodySmall.copyWith(
+          color: AppColors.textMuted,
+        ),
+      ),
+      trailing: Icon(
+        Icons.arrow_forward_ios,
+        color: AppColors.textMuted,
+        size: 16,
+      ),
+    );
   }
 }
