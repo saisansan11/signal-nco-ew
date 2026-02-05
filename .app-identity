@@ -1,0 +1,7 @@
+APP_NAME=signal-nco-ew
+DEPLOY_URL=https://saisansan11.github.io/signal-nco-ew/
+BASE_HREF=/signal-nco-ew/
+REPO=saisansan11/signal-nco-ew
+
+# WARNING: Do not deploy this app to any other URL
+# This file helps identify which app this is
