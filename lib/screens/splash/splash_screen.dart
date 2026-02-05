@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 
 import '../../app/constants.dart';
+import '../../services/user_role_service.dart';
 import '../onboarding/level_selection_screen.dart';
 import '../home/home_screen.dart';
+import '../home/teacher_home_screen.dart';
 import '../auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -121,17 +124,30 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
-    // User is logged in - check if they have selected a level
+    // User is logged in - check role and navigate accordingly
+    final roleService = Provider.of<UserRoleService>(context, listen: false);
+    await roleService.checkAndSetRole();
+
+    // Check if student has selected a level
     final prefs = await SharedPreferences.getInstance();
     final hasSelectedLevel = prefs.containsKey('user_progress');
 
     if (mounted) {
+      Widget targetScreen;
+
+      if (roleService.isTeacher) {
+        // Teacher goes directly to TeacherHomeScreen
+        targetScreen = const TeacherHomeScreen();
+      } else {
+        // Student needs to select level first time, then HomeScreen
+        targetScreen = hasSelectedLevel
+            ? const HomeScreen()
+            : const LevelSelectionScreen();
+      }
+
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              hasSelectedLevel
-                  ? const HomeScreen()
-                  : const LevelSelectionScreen(),
+          pageBuilder: (context, animation, secondaryAnimation) => targetScreen,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(
               opacity: animation,

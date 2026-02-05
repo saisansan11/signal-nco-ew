@@ -6,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 
 import 'app/constants.dart';
 import 'services/progress_service.dart';
+import 'services/user_role_service.dart';
 import 'screens/splash/splash_screen.dart';
 import 'firebase_options.dart';
 
@@ -44,8 +45,11 @@ class SignalNCOEWApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: ProgressService.instance,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: ProgressService.instance),
+        ChangeNotifierProvider(create: (_) => UserRoleService()),
+      ],
       child: MaterialApp(
         title: AppStrings.appNameTh,
         debugShowCheckedModeBanner: false,
