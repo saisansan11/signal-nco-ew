@@ -274,7 +274,11 @@ SIGINT แบ่งเป็น 2 ประเภทหลัก:
 • ยุค EW สมัยใหม่
 • สงครามโดรนในปัจจุบัน
 ''',
-        visualWidget: const EWWorldMapWidget(),
+        // EWWorldMapWidget needs height constraint as it uses Expanded internally
+        visualWidget: const SizedBox(
+          height: 450,
+          child: EWWorldMapWidget(),
+        ),
       ),
     ];
   }
