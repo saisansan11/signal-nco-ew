@@ -52,6 +52,10 @@ class _DFSimScreenState extends State<DFSimScreen>
   final List<double> _bearings = [0, 0, 0];
   final List<double> _bearingErrors = [0, 0, 0]; // Simulated measurement error
 
+  // User-adjusted bearings for manual triangulation
+  final List<double> _userBearings = [0, 0, 0];
+  int? _selectedStationIndex; // Currently selected station for adjustment
+
   // Intersection point calculation
   Offset? _intersectionPoint;
   double _gdop = 0; // Geometric Dilution of Precision
@@ -141,13 +145,65 @@ class _DFSimScreenState extends State<DFSimScreen>
       _stations[i].signalStrength = math.max(0.2, 1.0 - distance);
     }
 
+    // Initialize user bearings (start with random offset for challenge)
+    for (int i = 0; i < _stations.length; i++) {
+      // Start user bearings with some offset from true bearing
+      _userBearings[i] = (_bearings[i] + (random.nextDouble() - 0.5) * 60 + 360) % 360;
+    }
+
     // Calculate intersection point and quality metrics
     _calculateIntersection();
 
     _estimatedPosition = null;
     _showResult = false;
     _isScanning = true;
+    _selectedStationIndex = null;
     _revealController.reset();
+  }
+
+  void _updateUserBearing(int stationIndex, double newBearing) {
+    setState(() {
+      _userBearings[stationIndex] = newBearing % 360;
+      _selectedStationIndex = stationIndex;
+      _calculateUserIntersection();
+    });
+  }
+
+  void _calculateUserIntersection() {
+    // Calculate intersection using user-adjusted bearings
+    final points = <Offset>[];
+    final weights = <double>[];
+
+    for (int i = 0; i < _stations.length; i++) {
+      for (int j = i + 1; j < _stations.length; j++) {
+        final intersection = _lineIntersection(
+          _stations[i].position,
+          _userBearings[i],
+          _stations[j].position,
+          _userBearings[j],
+        );
+        if (intersection != null &&
+            intersection.dx >= 0 &&
+            intersection.dx <= 1 &&
+            intersection.dy >= 0 &&
+            intersection.dy <= 1) {
+          points.add(intersection);
+          weights.add(_stations[i].signalStrength * _stations[j].signalStrength);
+        }
+      }
+    }
+
+    if (points.isNotEmpty) {
+      double sumX = 0, sumY = 0, sumW = 0;
+      for (int i = 0; i < points.length; i++) {
+        sumX += points[i].dx * weights[i];
+        sumY += points[i].dy * weights[i];
+        sumW += weights[i];
+      }
+      _intersectionPoint = Offset(sumX / sumW, sumY / sumW);
+      _gdop = _calculateGDOP();
+      _cep = _calculateCEP(points);
+    }
   }
 
   void _calculateIntersection() {
@@ -485,7 +541,7 @@ class _DFSimScreenState extends State<DFSimScreen>
                                 size: size,
                                 painter: EnhancedDFMapPainter(
                                   stations: _stations,
-                                  bearings: _bearings,
+                                  bearings: _userBearings,
                                   targetPosition: _showResult ? _targetPosition : null,
                                   estimatedPosition: _estimatedPosition,
                                   intersectionPoint: _intersectionPoint,
@@ -525,10 +581,12 @@ class _DFSimScreenState extends State<DFSimScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'หาตำแหน่งเป้าหมายจาก Bearing',
-                style: AppTextStyles.titleSmall.copyWith(
-                  color: AppColors.textPrimary,
+              Expanded(
+                child: Text(
+                  'หมุนปรับทิศทางแต่ละสถานี',
+                  style: AppTextStyles.titleSmall.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
               // GDOP indicator
@@ -588,12 +646,17 @@ class _DFSimScreenState extends State<DFSimScreen>
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: _stations.map((station) {
-              final index = _stations.indexOf(station);
-              return _EnhancedBearingInfo(
+            children: _stations.asMap().entries.map((entry) {
+              final index = entry.key;
+              final station = entry.value;
+              return _InteractiveBearingDial(
                 station: station,
-                bearing: _bearings[index],
+                bearing: _userBearings[index],
+                trueBearing: _showResult ? _bearings[index] : null,
                 pulseValue: _pulseController.value,
+                isSelected: _selectedStationIndex == index,
+                onBearingChanged: (newBearing) => _updateUserBearing(index, newBearing),
+                enabled: !_showResult,
               );
             }).toList(),
           ),
@@ -778,100 +841,379 @@ enum DFDifficulty {
 
 // ============= Widgets =============
 
-class _EnhancedBearingInfo extends StatelessWidget {
+/// Interactive bearing dial with drag-to-rotate functionality
+class _InteractiveBearingDial extends StatefulWidget {
   final DFStation station;
   final double bearing;
+  final double? trueBearing; // Show true bearing after result
   final double pulseValue;
+  final bool isSelected;
+  final Function(double) onBearingChanged;
+  final bool enabled;
 
-  const _EnhancedBearingInfo({
+  const _InteractiveBearingDial({
     required this.station,
     required this.bearing,
+    this.trueBearing,
     required this.pulseValue,
+    required this.isSelected,
+    required this.onBearingChanged,
+    this.enabled = true,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final signalBars = (station.signalStrength * 5).round();
+  State<_InteractiveBearingDial> createState() => _InteractiveBearingDialState();
+}
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: station.color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: station.color.withValues(alpha: 0.3 + pulseValue * 0.2),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: station.color.withValues(alpha: pulseValue * 0.3),
-            blurRadius: 10,
-            spreadRadius: 2,
+class _InteractiveBearingDialState extends State<_InteractiveBearingDial> {
+  Offset? _lastPanPosition;
+  double _currentBearing = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentBearing = widget.bearing;
+  }
+
+  @override
+  void didUpdateWidget(_InteractiveBearingDial oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.bearing != widget.bearing) {
+      _currentBearing = widget.bearing;
+    }
+  }
+
+  void _handlePanStart(DragStartDetails details) {
+    if (!widget.enabled) return;
+    _lastPanPosition = details.localPosition;
+  }
+
+  void _handlePanUpdate(DragUpdateDetails details, Size dialSize) {
+    if (!widget.enabled || _lastPanPosition == null) return;
+
+    final center = Offset(dialSize.width / 2, dialSize.height / 2);
+    final currentPos = details.localPosition;
+
+    // Calculate angle change based on drag around center
+    final lastAngle = math.atan2(
+      _lastPanPosition!.dy - center.dy,
+      _lastPanPosition!.dx - center.dx,
+    );
+    final currentAngle = math.atan2(
+      currentPos.dy - center.dy,
+      currentPos.dx - center.dx,
+    );
+
+    var angleDelta = (currentAngle - lastAngle) * 180 / math.pi;
+
+    setState(() {
+      _currentBearing = (_currentBearing + angleDelta + 360) % 360;
+    });
+
+    widget.onBearingChanged(_currentBearing);
+    _lastPanPosition = currentPos;
+  }
+
+  void _handlePanEnd(DragEndDetails details) {
+    _lastPanPosition = null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final signalBars = (widget.station.signalStrength * 5).round();
+    final dialSize = 90.0;
+
+    return GestureDetector(
+      onPanStart: _handlePanStart,
+      onPanUpdate: (details) => _handlePanUpdate(details, Size(dialSize, dialSize)),
+      onPanEnd: _handlePanEnd,
+      child: Container(
+        width: dialSize + 24,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: widget.station.color.withValues(alpha: widget.isSelected ? 0.2 : 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: widget.station.color.withValues(
+              alpha: widget.isSelected ? 0.8 : 0.3 + widget.pulseValue * 0.2,
+            ),
+            width: widget.isSelected ? 2 : 1,
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 16,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: station.color,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: station.color.withValues(alpha: 0.5),
-                      blurRadius: 8 * (0.5 + pulseValue * 0.5),
-                      spreadRadius: 2 * pulseValue,
-                    ),
-                  ],
+          boxShadow: [
+            BoxShadow(
+              color: widget.station.color.withValues(
+                alpha: widget.isSelected ? 0.5 : widget.pulseValue * 0.3,
+              ),
+              blurRadius: widget.isSelected ? 15 : 10,
+              spreadRadius: widget.isSelected ? 3 : 2,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Station name
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: widget.station.color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  widget.station.id,
+                  style: TextStyle(
+                    color: widget.station.color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+
+            // Dial with bearing indicator
+            SizedBox(
+              width: dialSize,
+              height: dialSize,
+              child: CustomPaint(
+                painter: _BearingDialPainter(
+                  bearing: _currentBearing,
+                  trueBearing: widget.trueBearing,
+                  color: widget.station.color,
+                  isSelected: widget.isSelected,
                 ),
               ),
-              const SizedBox(width: 8),
+            ),
+
+            const SizedBox(height: 4),
+            // Bearing value
+            Text(
+              '${_currentBearing.toStringAsFixed(1)}°',
+              style: TextStyle(
+                color: widget.station.color,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                fontFamily: 'monospace',
+              ),
+            ),
+
+            // Show error from true bearing if revealed
+            if (widget.trueBearing != null) ...[
+              const SizedBox(height: 2),
               Text(
-                station.id,
+                'ผิด ${_calculateError().toStringAsFixed(1)}°',
                 style: TextStyle(
-                  color: station.color,
+                  color: _calculateError().abs() < 5
+                      ? Colors.green
+                      : _calculateError().abs() < 15
+                          ? Colors.orange
+                          : Colors.red,
+                  fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  fontSize: 14,
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${bearing.toStringAsFixed(1)}°',
-            style: TextStyle(
-              color: station.color,
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-              fontFamily: 'monospace',
+
+            const SizedBox(height: 4),
+            // Signal strength indicator
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(5, (i) {
+                return Container(
+                  width: 4,
+                  height: 6 + i * 2.0,
+                  margin: const EdgeInsets.symmetric(horizontal: 1),
+                  decoration: BoxDecoration(
+                    color: i < signalBars
+                        ? widget.station.color
+                        : widget.station.color.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                );
+              }),
             ),
-          ),
-          const SizedBox(height: 6),
-          // Signal strength indicator
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: List.generate(5, (i) {
-              return Container(
-                width: 4,
-                height: 6 + i * 2.0,
-                margin: const EdgeInsets.symmetric(horizontal: 1),
-                decoration: BoxDecoration(
-                  color: i < signalBars
-                      ? station.color
-                      : station.color.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              );
-            }),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  double _calculateError() {
+    if (widget.trueBearing == null) return 0;
+    var diff = _currentBearing - widget.trueBearing!;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    return diff;
+  }
+}
+
+/// Custom painter for the bearing dial
+class _BearingDialPainter extends CustomPainter {
+  final double bearing;
+  final double? trueBearing;
+  final Color color;
+  final bool isSelected;
+
+  _BearingDialPainter({
+    required this.bearing,
+    this.trueBearing,
+    required this.color,
+    required this.isSelected,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 4;
+
+    // Draw outer ring
+    final ringPaint = Paint()
+      ..color = color.withValues(alpha: 0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+
+    canvas.drawCircle(center, radius, ringPaint);
+
+    // Draw tick marks
+    for (int i = 0; i < 36; i++) {
+      final angle = i * 10 * math.pi / 180 - math.pi / 2;
+      final isCardinal = i % 9 == 0;
+      final isMajor = i % 3 == 0;
+      final length = isCardinal ? 8 : (isMajor ? 5 : 3);
+
+      final start = Offset(
+        center.dx + (radius - length) * math.cos(angle),
+        center.dy + (radius - length) * math.sin(angle),
+      );
+      final end = Offset(
+        center.dx + radius * math.cos(angle),
+        center.dy + radius * math.sin(angle),
+      );
+
+      final tickPaint = Paint()
+        ..color = color.withValues(alpha: isCardinal ? 0.8 : 0.4)
+        ..strokeWidth = isCardinal ? 2 : 1;
+
+      canvas.drawLine(start, end, tickPaint);
+    }
+
+    // Draw cardinal labels
+    final labels = ['N', 'E', 'S', 'W'];
+    for (int i = 0; i < 4; i++) {
+      final angle = i * math.pi / 2 - math.pi / 2;
+      final labelRadius = radius - 16;
+
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: labels[i],
+          style: TextStyle(
+            color: i == 0 ? Colors.red : color,
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(
+          center.dx + labelRadius * math.cos(angle) - textPainter.width / 2,
+          center.dy + labelRadius * math.sin(angle) - textPainter.height / 2,
+        ),
+      );
+    }
+
+    // Draw true bearing indicator (if revealed)
+    if (trueBearing != null) {
+      final trueBearingRad = trueBearing! * math.pi / 180 - math.pi / 2;
+      final trueEndX = center.dx + (radius - 8) * math.cos(trueBearingRad);
+      final trueEndY = center.dy + (radius - 8) * math.sin(trueBearingRad);
+
+      final truePaint = Paint()
+        ..color = Colors.green
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round;
+
+      canvas.drawLine(center, Offset(trueEndX, trueEndY), truePaint);
+
+      // Draw true bearing marker
+      canvas.drawCircle(Offset(trueEndX, trueEndY), 4, Paint()..color = Colors.green);
+    }
+
+    // Draw current bearing arrow (user adjusted)
+    final bearingRad = bearing * math.pi / 180 - math.pi / 2;
+    final arrowLength = radius - 8;
+    final endX = center.dx + arrowLength * math.cos(bearingRad);
+    final endY = center.dy + arrowLength * math.sin(bearingRad);
+
+    // Arrow glow
+    final glowPaint = Paint()
+      ..color = color.withValues(alpha: 0.5)
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+
+    canvas.drawLine(center, Offset(endX, endY), glowPaint);
+
+    // Arrow line
+    final arrowPaint = Paint()
+      ..color = color
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawLine(center, Offset(endX, endY), arrowPaint);
+
+    // Arrow head
+    final headAngle = 25 * math.pi / 180;
+    final headLength = 10.0;
+
+    final headPath = Path();
+    headPath.moveTo(endX, endY);
+    headPath.lineTo(
+      endX - headLength * math.cos(bearingRad - headAngle),
+      endY - headLength * math.sin(bearingRad - headAngle),
+    );
+    headPath.moveTo(endX, endY);
+    headPath.lineTo(
+      endX - headLength * math.cos(bearingRad + headAngle),
+      endY - headLength * math.sin(bearingRad + headAngle),
+    );
+
+    canvas.drawPath(headPath, arrowPaint);
+
+    // Center dot
+    canvas.drawCircle(center, 4, Paint()..color = color);
+
+    // Drag hint (if selected)
+    if (isSelected) {
+      final hintPaint = Paint()
+        ..color = color.withValues(alpha: 0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2;
+
+      // Draw circular arrow hint
+      final hintPath = Path();
+      hintPath.addArc(
+        Rect.fromCircle(center: center, radius: radius + 6),
+        -math.pi / 4,
+        math.pi / 2,
+      );
+      canvas.drawPath(hintPath, hintPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _BearingDialPainter oldDelegate) {
+    return bearing != oldDelegate.bearing ||
+        trueBearing != oldDelegate.trueBearing ||
+        isSelected != oldDelegate.isSelected;
   }
 }
 
