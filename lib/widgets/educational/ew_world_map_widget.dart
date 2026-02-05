@@ -400,6 +400,119 @@ class _EWWorldMapWidgetState extends State<EWWorldMapWidget>
       color: AppColors.radarColor,
       era: EWEra.modern,
     ),
+
+    // ============ เอเชียตะวันออกเฉียงใต้ ============
+    EWHistoricalEvent(
+      id: 'thailand_ew',
+      title: 'ไทยพัฒนาระบบ EW',
+      year: 2020,
+      location: 'ประเทศไทย',
+      lat: 13.7563,
+      lon: 100.5018,
+      description: 'กองทัพไทยพัฒนาระบบ C-UAS\n'
+          'ติดตั้งระบบตรวจจับและรบกวนโดรน\n'
+          'ร่วมมือกับอิสราเอลในด้าน SIGINT',
+      significance: 'ไทยก้าวสู่ EW ยุคใหม่',
+      icon: Icons.shield,
+      color: AppColors.esColor,
+      era: EWEra.modern,
+    ),
+    EWHistoricalEvent(
+      id: 'thai_cambodia',
+      title: 'ชายแดนไทย-กัมพูชา',
+      year: 2011,
+      location: 'ปราสาทพระวิหาร',
+      lat: 14.3920,
+      lon: 104.6803,
+      description: 'ความขัดแย้งชายแดน\n'
+          'ใช้เรดาร์เฝ้าตรวจและ SIGINT\n'
+          'การรบกวนสัญญาณสื่อสาร',
+      significance: 'EW ในความขัดแย้งชายแดน',
+      icon: Icons.terrain,
+      color: AppColors.warning,
+      era: EWEra.modern,
+    ),
+    EWHistoricalEvent(
+      id: 'southchinasea',
+      title: 'ทะเลจีนใต้: GPS Spoofing',
+      year: 2019,
+      location: 'ทะเลจีนใต้',
+      lat: 15.0,
+      lon: 114.0,
+      description: 'เรือหลายลำรายงาน GPS ผิดพลาด\n'
+          'มีการ Spoofing สัญญาณ GPS ในพื้นที่\n'
+          'จีนสร้างฐานทัพพร้อมระบบ EW บนเกาะเทียม',
+      significance: 'GPS Warfare ในเอเชีย',
+      icon: Icons.satellite_alt,
+      color: AppColors.gpsColor,
+      era: EWEra.modern,
+    ),
+
+    // ============ อเมริกาใต้ ============
+    EWHistoricalEvent(
+      id: 'venezuela',
+      title: 'สหรัฐฯ-เวเนซุเอลา',
+      year: 2019,
+      location: 'เวเนซุเอลา',
+      lat: 10.4806,
+      lon: -66.9036,
+      description: 'เวเนซุเอลาใช้ระบบ EW รัสเซีย\n'
+          'รบกวนการสื่อสารและ GPS ในพื้นที่\n'
+          'สหรัฐฯ บินลาดตระเวนด้วย EP-3',
+      significance: 'EW ในความขัดแย้งทางการเมือง',
+      icon: Icons.airplanemode_active,
+      color: AppColors.eaColor,
+      era: EWEra.modern,
+    ),
+
+    // ============ ตะวันออกกลาง เพิ่มเติม ============
+    EWHistoricalEvent(
+      id: 'iran_drone',
+      title: 'อิหร่านยึดโดรน RQ-170',
+      year: 2011,
+      location: 'อิหร่าน',
+      lat: 35.6892,
+      lon: 51.3890,
+      description: 'อิหร่านอ้างว่า Spoof สัญญาณ GPS\n'
+          'ทำให้โดรน Stealth ของสหรัฐฯ ลงจอด\n'
+          'แสดงจุดอ่อนของการพึ่งพา GPS',
+      significance: 'GPS Spoofing vs โดรน',
+      icon: Icons.flight_land,
+      color: AppColors.gpsColor,
+      era: EWEra.modern,
+    ),
+    EWHistoricalEvent(
+      id: 'gaza_2023',
+      title: 'สงคราม Gaza 2023',
+      year: 2023,
+      location: 'กาซา',
+      lat: 31.5,
+      lon: 34.47,
+      description: 'อิสราเอลใช้ EW รบกวนโดรน Hamas\n'
+          'ระบบ Iron Dome ประสานกับ C-UAS\n'
+          'Cyber + EW ในสงครามเมือง',
+      significance: 'EW ในสงครามเมือง',
+      icon: Icons.location_city,
+      color: AppColors.eaColor,
+      era: EWEra.modern,
+    ),
+
+    // ============ เกาหลี ============
+    EWHistoricalEvent(
+      id: 'korea_gps',
+      title: 'เกาหลีเหนือ Jam GPS',
+      year: 2016,
+      location: 'คาบสมุทรเกาหลี',
+      lat: 37.5665,
+      lon: 126.9780,
+      description: 'เกาหลีเหนือรบกวน GPS เกาหลีใต้\n'
+          'กระทบเครื่องบินและเรือหลายร้อยลำ\n'
+          'ทดสอบความสามารถ EW เป็นระยะ',
+      significance: 'GPS Jamming ระดับชาติ',
+      icon: Icons.gps_off,
+      color: AppColors.gpsColor,
+      era: EWEra.modern,
+    ),
   ];
 
   List<EWHistoricalEvent> get _events {
