@@ -23,6 +23,7 @@ import '../campaign/campaign_screen.dart';
 import '../teacher/student_detail_screen.dart';
 import '../teacher/classroom_screen.dart';
 import '../teacher/quiz_editor_screen.dart';
+import '../teacher/teacher_dashboard_screen.dart';
 
 class TeacherHomeScreen extends StatefulWidget {
   const TeacherHomeScreen({super.key});
@@ -315,6 +316,12 @@ class _TeacherDashboardTab extends StatelessWidget {
                 label: 'นักเรียนทั้งหมด',
                 value: '$totalStudents',
                 color: AppColors.info,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const TeacherDashboardScreen(),
+                  ),
+                ),
               ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.2),
             ),
             const SizedBox(width: 12),
@@ -324,6 +331,12 @@ class _TeacherDashboardTab extends StatelessWidget {
                 label: 'ใช้งานวันนี้',
                 value: '$activeToday',
                 color: AppColors.success,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const TeacherDashboardScreen(),
+                  ),
+                ),
               ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
             ),
           ],
@@ -419,50 +432,62 @@ class _StatCard extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.icon,
     required this.label,
     required this.value,
     required this.color,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSizes.paddingM),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(AppSizes.radiusL),
-        border: Border.all(color: color.withAlpha(50)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withAlpha(30),
-              borderRadius: BorderRadius.circular(8),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppSizes.paddingM),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(AppSizes.radiusL),
+          border: Border.all(color: color.withAlpha(50)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(30),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: color, size: 20),
+                ),
+                if (onTap != null)
+                  Icon(Icons.chevron_right, color: AppColors.textMuted, size: 20),
+              ],
             ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: AppTextStyles.displayMedium.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: AppTextStyles.displayMedium.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
