@@ -506,8 +506,8 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             const SizedBox(height: 16),
             _AboutItem(label: 'เวอร์ชัน', value: '1.0.0'),
-            _AboutItem(label: 'พัฒนาโดย', value: 'Signal School'),
-            _AboutItem(label: 'ติดต่อ', value: 'support@signalschool.ac.th'),
+            _AboutItem(label: 'พัฒนาโดย', value: 'ร.ต. วสันต์ ทัศนามล'),
+            _AboutItem(label: 'หน่วย', value: 'โรงเรียนทหารสื่อสาร'),
           ],
         ),
         actions: [
