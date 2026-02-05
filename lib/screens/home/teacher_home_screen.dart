@@ -21,6 +21,8 @@ import '../profile/profile_screen.dart';
 import '../quiz/quiz_screen.dart';
 import '../campaign/campaign_screen.dart';
 import '../teacher/student_detail_screen.dart';
+import '../teacher/classroom_screen.dart';
+import '../teacher/quiz_editor_screen.dart';
 
 class TeacherHomeScreen extends StatefulWidget {
   const TeacherHomeScreen({super.key});
@@ -234,6 +236,18 @@ class _TeacherDashboardTab extends StatelessWidget {
 
                   // Quick Stats Cards
                   _buildQuickStats(),
+
+                  const SizedBox(height: 24),
+
+                  // Quick Actions
+                  Text(
+                    'เครื่องมือ',
+                    style: AppTextStyles.titleMedium.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildQuickActions(context),
                 ],
               ),
             ),
@@ -315,6 +329,87 @@ class _TeacherDashboardTab extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _QuickActionCard(
+            icon: Icons.class_,
+            label: 'จัดการห้องเรียน',
+            color: Colors.cyan,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ClassroomScreen()),
+            ),
+          ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _QuickActionCard(
+            icon: Icons.quiz,
+            label: 'สร้างแบบทดสอบ',
+            color: Colors.purple,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const QuizEditorScreen()),
+            ),
+          ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActionCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickActionCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppSizes.paddingM),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(AppSizes.radiusL),
+          border: Border.all(color: color.withAlpha(50)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withAlpha(30),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
