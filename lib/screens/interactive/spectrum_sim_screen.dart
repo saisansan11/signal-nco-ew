@@ -17,6 +17,7 @@ class SpectrumSimScreen extends StatefulWidget {
 class _SpectrumSimScreenState extends State<SpectrumSimScreen>
     with TickerProviderStateMixin {
   late AnimationController _scanController;
+  late AnimationController _glowController;
   final List<SimSignal> _signals = [];
   final math.Random _random = math.Random();
   bool _isScanning = false;
@@ -26,6 +27,26 @@ class _SpectrumSimScreenState extends State<SpectrumSimScreen>
   double _centerFrequency = 150.0; // MHz
   double _span = 100.0; // MHz
 
+  // Enhanced features
+  bool _showWaterfall = true;
+  bool _showPeakHold = true;
+  final bool _showMarkers = true;
+  final double _referenceLevel = -40.0; // dBm
+  final double _noiseFloor = -95.0; // dBm
+
+  // Waterfall history (time-based frequency data)
+  final List<List<double>> _waterfallHistory = [];
+  static const int _waterfallHistorySize = 60;
+
+  // Peak hold data
+  final Map<int, double> _peakHoldValues = {};
+
+  // Markers
+  final List<SpectrumMarker> _markers = [];
+
+  // Noise animation seed
+  int _noiseSeed = 0;
+
   @override
   void initState() {
     super.initState();
@@ -34,26 +55,97 @@ class _SpectrumSimScreenState extends State<SpectrumSimScreen>
       vsync: this,
     );
 
+    _glowController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(reverse: true);
+
     _scanController.addListener(() {
-      if (_isScanning && _scanController.value > 0.95) {
-        _checkSignalDetection();
+      if (_isScanning) {
+        if (_scanController.value > 0.95) {
+          _checkSignalDetection();
+        }
+        // Update waterfall on each scan cycle
+        if (_scanController.value < 0.05) {
+          _updateWaterfall();
+          _noiseSeed = _random.nextInt(1000000);
+        }
       }
     });
 
     _generateSignals();
+    _initializeWaterfall();
+  }
+
+  void _initializeWaterfall() {
+    _waterfallHistory.clear();
+    for (int i = 0; i < _waterfallHistorySize; i++) {
+      _waterfallHistory.add(_generateWaterfallLine());
+    }
+  }
+
+  List<double> _generateWaterfallLine() {
+    final line = <double>[];
+    final minFreq = _centerFrequency - _span / 2;
+    final maxFreq = _centerFrequency + _span / 2;
+
+    for (int i = 0; i < 200; i++) {
+      final freq = minFreq + (maxFreq - minFreq) * i / 200;
+      double power = _noiseFloor + _random.nextDouble() * 10 - 5;
+
+      // Add signal contributions
+      for (final signal in _signals) {
+        if (signal.detected) {
+          final distance = (freq - signal.frequency).abs();
+          if (distance < signal.bandwidth) {
+            final contribution =
+                (signal.power - _noiseFloor) * (1 - distance / signal.bandwidth);
+            power = math.max(power, _noiseFloor + contribution);
+          }
+        }
+      }
+
+      line.add(power);
+    }
+    return line;
+  }
+
+  void _updateWaterfall() {
+    if (_waterfallHistory.length >= _waterfallHistorySize) {
+      _waterfallHistory.removeAt(0);
+    }
+    _waterfallHistory.add(_generateWaterfallLine());
   }
 
   void _generateSignals() {
     _signals.clear();
     final signalCount = 4 + _random.nextInt(4); // 4-7 signals
 
+    final signalTypes = [
+      SignalType.communication,
+      SignalType.radar,
+      SignalType.navigation,
+      SignalType.broadcast,
+      SignalType.dataLink,
+    ];
+
+    final modulations = [
+      ModulationType.am,
+      ModulationType.fm,
+      ModulationType.psk,
+      ModulationType.fsk,
+      ModulationType.ofdm,
+    ];
+
     for (int i = 0; i < signalCount; i++) {
       _signals.add(SimSignal(
         id: i,
         frequency: 100 + _random.nextDouble() * 200, // 100-300 MHz
         bandwidth: 2 + _random.nextDouble() * 10, // 2-12 MHz bandwidth
-        power: -40 - _random.nextDouble() * 50, // -40 to -90 dBm
-        type: SignalType.values[_random.nextInt(SignalType.values.length)],
+        power: -40 - _random.nextDouble() * 45, // -40 to -85 dBm
+        type: signalTypes[_random.nextInt(signalTypes.length)],
+        modulation: modulations[_random.nextInt(modulations.length)],
+        isIntermittent: _random.nextDouble() < 0.3, // 30% chance intermittent
       ));
     }
   }
@@ -64,6 +156,7 @@ class _SpectrumSimScreenState extends State<SpectrumSimScreen>
       _detectedCount = 0;
       _identifiedCount = 0;
       _selectedSignal = null;
+      _peakHoldValues.clear();
       for (final signal in _signals) {
         signal.detected = false;
         signal.identified = false;
@@ -81,13 +174,16 @@ class _SpectrumSimScreenState extends State<SpectrumSimScreen>
 
   void _checkSignalDetection() {
     for (final signal in _signals) {
+      // Handle intermittent signals
+      if (signal.isIntermittent && _random.nextDouble() < 0.4) {
+        continue; // Skip detection sometimes
+      }
+
       if (!signal.detected) {
-        // Check if signal is in visible range
         final minFreq = _centerFrequency - _span / 2;
         final maxFreq = _centerFrequency + _span / 2;
         if (signal.frequency >= minFreq && signal.frequency <= maxFreq) {
-          // Random detection based on signal strength
-          final detectionProb = (signal.power + 90) / 50; // Higher power = higher prob
+          final detectionProb = (signal.power + 95) / 55;
           if (_random.nextDouble() < detectionProb) {
             setState(() {
               signal.detected = true;
@@ -95,6 +191,25 @@ class _SpectrumSimScreenState extends State<SpectrumSimScreen>
               _detectedCount++;
             });
           }
+        }
+      }
+    }
+
+    // Update peak hold
+    _updatePeakHold();
+  }
+
+  void _updatePeakHold() {
+    if (!_showPeakHold) return;
+
+    final minFreq = _centerFrequency - _span / 2;
+    for (final signal in _signals) {
+      if (signal.detected) {
+        final binIndex =
+            ((signal.frequency - minFreq) / _span * 200).round().clamp(0, 199);
+        final currentPeak = _peakHoldValues[binIndex] ?? _noiseFloor;
+        if (signal.power > currentPeak) {
+          _peakHoldValues[binIndex] = signal.power;
         }
       }
     }
@@ -132,9 +247,11 @@ class _SpectrumSimScreenState extends State<SpectrumSimScreen>
               color: Colors.white,
             ),
             const SizedBox(width: 8),
-            Text(isCorrect
-                ? 'ถูกต้อง! ระบุสัญญาณได้สำเร็จ'
-                : 'ไม่ถูกต้อง - สัญญาณนี้คือ ${_selectedSignal!.type.titleTh}'),
+            Expanded(
+              child: Text(isCorrect
+                  ? 'ถูกต้อง! ระบุสัญญาณได้สำเร็จ'
+                  : 'ไม่ถูกต้อง - สัญญาณนี้คือ ${_selectedSignal!.type.titleTh}'),
+            ),
           ],
         ),
         backgroundColor: isCorrect ? AppColors.success : AppColors.error,
@@ -143,13 +260,37 @@ class _SpectrumSimScreenState extends State<SpectrumSimScreen>
     );
   }
 
+  void _addMarker() {
+    if (_selectedSignal == null) return;
+
+    final existingMarker = _markers.indexWhere(
+        (m) => (m.frequency - _selectedSignal!.frequency).abs() < 1);
+
+    if (existingMarker >= 0) {
+      setState(() {
+        _markers.removeAt(existingMarker);
+      });
+    } else if (_markers.length < 4) {
+      setState(() {
+        _markers.add(SpectrumMarker(
+          id: _markers.length + 1,
+          frequency: _selectedSignal!.frequency,
+          power: _selectedSignal!.power,
+        ));
+      });
+    }
+  }
+
   void _resetSimulation() {
     setState(() {
       _isScanning = false;
       _detectedCount = 0;
       _identifiedCount = 0;
       _selectedSignal = null;
+      _markers.clear();
+      _peakHoldValues.clear();
       _generateSignals();
+      _initializeWaterfall();
     });
     _scanController.stop();
     _scanController.reset();
@@ -158,6 +299,7 @@ class _SpectrumSimScreenState extends State<SpectrumSimScreen>
   @override
   void dispose() {
     _scanController.dispose();
+    _glowController.dispose();
     super.dispose();
   }
 
@@ -168,11 +310,27 @@ class _SpectrumSimScreenState extends State<SpectrumSimScreen>
       steps: SimulationTutorials.spectrumTutorial,
       primaryColor: AppColors.esColor,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: const Color(0xFF050510),
         appBar: AppBar(
           title: const Text('วิเคราะห์สเปกตรัม'),
-          backgroundColor: AppColors.surface,
+          backgroundColor: const Color(0xFF0a0a1a),
           actions: [
+            IconButton(
+              icon: Icon(
+                _showWaterfall ? Icons.waves : Icons.waves_outlined,
+                color: _showWaterfall ? Colors.cyan : Colors.white54,
+              ),
+              onPressed: () => setState(() => _showWaterfall = !_showWaterfall),
+              tooltip: 'Waterfall Display',
+            ),
+            IconButton(
+              icon: Icon(
+                _showPeakHold ? Icons.trending_up : Icons.trending_flat,
+                color: _showPeakHold ? Colors.yellow : Colors.white54,
+              ),
+              onPressed: () => setState(() => _showPeakHold = !_showPeakHold),
+              tooltip: 'Peak Hold',
+            ),
             IconButton(
               icon: const Icon(Icons.help_outline),
               onPressed: () async {
@@ -190,279 +348,687 @@ class _SpectrumSimScreenState extends State<SpectrumSimScreen>
           ],
         ),
         body: SafeArea(
-        child: Column(
-          children: [
-            // Info bar
-            Container(
-              padding: const EdgeInsets.all(AppSizes.paddingM),
-              color: AppColors.surface,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _InfoItem(
-                    icon: Icons.wifi_tethering,
-                    label: 'ตรวจจับ',
-                    value: '$_detectedCount/${_signals.length}',
-                    color: AppColors.esColor,
-                  ),
-                  _InfoItem(
-                    icon: Icons.verified,
-                    label: 'ระบุได้',
-                    value: '$_identifiedCount',
-                    color: AppColors.success,
-                  ),
-                  _InfoItem(
-                    icon: Icons.center_focus_strong,
-                    label: 'ความถี่กลาง',
-                    value: '${_centerFrequency.toInt()} MHz',
-                    color: AppColors.spectrumColor,
-                  ),
-                ],
-              ),
-            ).animate().fadeIn(duration: 300.ms),
+          child: Column(
+            children: [
+              // Enhanced info bar with professional styling
+              _buildInfoBar(),
 
-            // Spectrum display
-            Expanded(
-              flex: 3,
-              child: Padding(
-                padding: const EdgeInsets.all(AppSizes.paddingM),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0A0A0A),
-                    borderRadius: BorderRadius.circular(AppSizes.radiusL),
-                    border: Border.all(
-                      color: AppColors.spectrumColor.withAlpha(100),
-                      width: 2,
-                    ),
+              // Main spectrum display
+              Expanded(
+                flex: _showWaterfall ? 2 : 3,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                  child: _buildSpectrumDisplay(),
+                ),
+              ),
+
+              // Waterfall display (optional)
+              if (_showWaterfall)
+                Expanded(
+                  flex: 1,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                    child: _buildWaterfallDisplay(),
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusL - 2),
-                    child: AnimatedBuilder(
-                      animation: _scanController,
-                      builder: (context, child) {
-                        return CustomPaint(
-                          painter: SpectrumDisplayPainter(
-                            signals: _signals,
-                            centerFrequency: _centerFrequency,
-                            span: _span,
-                            scanProgress: _isScanning ? _scanController.value : 0,
-                            selectedSignal: _selectedSignal,
-                          ),
-                          child: GestureDetector(
-                            onTapDown: (details) {
-                              _handleSpectrumTap(details.localPosition);
-                            },
-                          ),
-                        );
-                      },
-                    ),
+                ),
+
+              // Frequency controls
+              _buildFrequencyControls(),
+
+              // Signal identification panel
+              if (_selectedSignal != null) _buildSignalPanel(),
+
+              // Control buttons
+              _buildControlButtons(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0a0a1a),
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.cyan.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _InfoChip(
+            icon: Icons.wifi_tethering,
+            label: 'DETECTED',
+            value: '$_detectedCount/${_signals.length}',
+            color: Colors.cyan,
+            isActive: _detectedCount > 0,
+          ),
+          _InfoChip(
+            icon: Icons.verified,
+            label: 'IDENTIFIED',
+            value: '$_identifiedCount',
+            color: Colors.green,
+            isActive: _identifiedCount > 0,
+          ),
+          _InfoChip(
+            icon: Icons.center_focus_strong,
+            label: 'CENTER',
+            value: '${_centerFrequency.toInt()} MHz',
+            color: Colors.amber,
+            isActive: true,
+          ),
+          _InfoChip(
+            icon: Icons.swap_horiz,
+            label: 'SPAN',
+            value: '${_span.toInt()} MHz',
+            color: Colors.purple,
+            isActive: true,
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 300.ms);
+  }
+
+  Widget _buildSpectrumDisplay() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF050510),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.cyan.withValues(alpha: 0.4),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.cyan.withValues(alpha: 0.2),
+            blurRadius: 20,
+            spreadRadius: -5,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Stack(
+          children: [
+            // Main spectrum painter
+            AnimatedBuilder(
+              animation: Listenable.merge([_scanController, _glowController]),
+              builder: (context, child) {
+                return CustomPaint(
+                  painter: EnhancedSpectrumPainter(
+                    signals: _signals,
+                    centerFrequency: _centerFrequency,
+                    span: _span,
+                    scanProgress: _isScanning ? _scanController.value : 0,
+                    selectedSignal: _selectedSignal,
+                    referenceLevel: _referenceLevel,
+                    noiseFloor: _noiseFloor,
+                    showPeakHold: _showPeakHold,
+                    peakHoldValues: _peakHoldValues,
+                    markers: _markers,
+                    showMarkers: _showMarkers,
+                    glowIntensity: _glowController.value,
+                    noiseSeed: _noiseSeed,
+                  ),
+                  size: Size.infinite,
+                );
+              },
+            ),
+            // Gesture detector for tap
+            Positioned.fill(
+              child: GestureDetector(
+                onTapDown: (details) => _handleSpectrumTap(details.localPosition),
+                onLongPress: _selectedSignal != null ? _addMarker : null,
+              ),
+            ),
+            // Corner overlays
+            _buildCornerOverlays(),
+          ],
+        ),
+      ),
+    ).animate(delay: 200.ms).fadeIn(duration: 400.ms);
+  }
+
+  Widget _buildCornerOverlays() {
+    return Stack(
+      children: [
+        // Top-left: Reference level
+        Positioned(
+          top: 8,
+          left: 8,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: Colors.cyan.withValues(alpha: 0.5)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'REF: ${_referenceLevel.toInt()} dBm',
+                  style: const TextStyle(
+                    color: Colors.cyan,
+                    fontSize: 10,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'SCALE: 10 dB/div',
+                  style: TextStyle(
+                    color: Colors.cyan.withValues(alpha: 0.7),
+                    fontSize: 9,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Top-right: Scan status
+        Positioned(
+          top: 8,
+          right: 8,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: _isScanning
+                    ? Colors.green.withValues(alpha: 0.8)
+                    : Colors.orange.withValues(alpha: 0.5),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _isScanning ? Colors.green : Colors.orange,
+                    boxShadow: _isScanning
+                        ? [
+                            BoxShadow(
+                              color: Colors.green.withValues(alpha: 0.5),
+                              blurRadius: 4,
+                            ),
+                          ]
+                        : null,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _isScanning ? 'SCANNING' : 'STOPPED',
+                  style: TextStyle(
+                    color: _isScanning ? Colors.green : Colors.orange,
+                    fontSize: 10,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Bottom-left: Frequency range
+        Positioned(
+          bottom: 24,
+          left: 8,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: Text(
+              'START: ${(_centerFrequency - _span / 2).toInt()} MHz',
+              style: TextStyle(
+                color: Colors.green.withValues(alpha: 0.8),
+                fontSize: 9,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ),
+        ),
+        // Bottom-right: End frequency
+        Positioned(
+          bottom: 24,
+          right: 8,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(3),
+            ),
+            child: Text(
+              'STOP: ${(_centerFrequency + _span / 2).toInt()} MHz',
+              style: TextStyle(
+                color: Colors.green.withValues(alpha: 0.8),
+                fontSize: 9,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWaterfallDisplay() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF050510),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Colors.blue.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(7),
+        child: Stack(
+          children: [
+            CustomPaint(
+              painter: WaterfallPainter(
+                history: _waterfallHistory,
+                noiseFloor: _noiseFloor,
+                referenceLevel: _referenceLevel,
+              ),
+              size: Size.infinite,
+            ),
+            // Time axis label
+            Positioned(
+              top: 4,
+              left: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: const Text(
+                  'WATERFALL',
+                  style: TextStyle(
+                    color: Colors.blue,
+                    fontSize: 8,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-            ).animate(delay: 200.ms).fadeIn(duration: 400.ms),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-            // Frequency controls
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSizes.paddingL),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Text('ความถี่กลาง', style: AppTextStyles.labelMedium),
-                      Expanded(
-                        child: Slider(
-                          value: _centerFrequency,
-                          min: 50,
-                          max: 350,
-                          divisions: 60,
-                          activeColor: AppColors.spectrumColor,
-                          onChanged: (value) {
-                            setState(() => _centerFrequency = value);
-                          },
-                        ),
-                      ),
-                      Text('${_centerFrequency.toInt()} MHz',
-                          style: AppTextStyles.labelMedium),
-                    ],
+  Widget _buildFrequencyControls() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              const SizedBox(
+                width: 70,
+                child: Text(
+                  'CENTER',
+                  style: TextStyle(
+                    color: Colors.amber,
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
                   ),
-                  Row(
-                    children: [
-                      Text('Span', style: AppTextStyles.labelMedium),
-                      Expanded(
-                        child: Slider(
-                          value: _span,
-                          min: 20,
-                          max: 200,
-                          divisions: 18,
-                          activeColor: AppColors.spectrumColor,
-                          onChanged: (value) {
-                            setState(() => _span = value);
-                          },
-                        ),
+                ),
+              ),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: Colors.amber,
+                    inactiveTrackColor: Colors.amber.withValues(alpha: 0.2),
+                    thumbColor: Colors.amber,
+                    overlayColor: Colors.amber.withValues(alpha: 0.2),
+                    trackHeight: 4,
+                  ),
+                  child: Slider(
+                    value: _centerFrequency,
+                    min: 50,
+                    max: 350,
+                    divisions: 60,
+                    onChanged: (value) {
+                      setState(() {
+                        _centerFrequency = value;
+                        _initializeWaterfall();
+                      });
+                    },
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 70,
+                child: Text(
+                  '${_centerFrequency.toInt()} MHz',
+                  style: const TextStyle(
+                    color: Colors.amber,
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              const SizedBox(
+                width: 70,
+                child: Text(
+                  'SPAN',
+                  style: TextStyle(
+                    color: Colors.purple,
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: Colors.purple,
+                    inactiveTrackColor: Colors.purple.withValues(alpha: 0.2),
+                    thumbColor: Colors.purple,
+                    overlayColor: Colors.purple.withValues(alpha: 0.2),
+                    trackHeight: 4,
+                  ),
+                  child: Slider(
+                    value: _span,
+                    min: 20,
+                    max: 200,
+                    divisions: 18,
+                    onChanged: (value) {
+                      setState(() {
+                        _span = value;
+                        _initializeWaterfall();
+                      });
+                    },
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 70,
+                child: Text(
+                  '${_span.toInt()} MHz',
+                  style: const TextStyle(
+                    color: Colors.purple,
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSignalPanel() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0a0a1a),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: _selectedSignal!.identified
+              ? (_selectedSignal!.correctlyIdentified
+                  ? Colors.green.withValues(alpha: 0.6)
+                  : Colors.red.withValues(alpha: 0.6))
+              : Colors.cyan.withValues(alpha: 0.5),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (_selectedSignal!.identified
+                    ? (_selectedSignal!.correctlyIdentified
+                        ? Colors.green
+                        : Colors.red)
+                    : Colors.cyan)
+                .withValues(alpha: 0.15),
+            blurRadius: 10,
+            spreadRadius: -3,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header
+          Row(
+            children: [
+              Icon(
+                Icons.signal_cellular_alt,
+                color: _selectedSignal!.type.color,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'SELECTED SIGNAL',
+                style: TextStyle(
+                  color: _selectedSignal!.type.color,
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              if (!_selectedSignal!.identified)
+                GestureDetector(
+                  onTap: _addMarker,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: Colors.orange.withValues(alpha: 0.5),
                       ),
-                      Text('${_span.toInt()} MHz',
-                          style: AppTextStyles.labelMedium),
-                    ],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.push_pin, color: Colors.orange, size: 12),
+                        SizedBox(width: 4),
+                        Text(
+                          'MARKER',
+                          style: TextStyle(
+                            color: Colors.orange,
+                            fontSize: 9,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Signal info
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _SignalDataBox(
+                label: 'FREQ',
+                value: _selectedSignal!.frequency.toStringAsFixed(2),
+                unit: 'MHz',
+                color: Colors.cyan,
+              ),
+              _SignalDataBox(
+                label: 'POWER',
+                value: _selectedSignal!.power.toStringAsFixed(1),
+                unit: 'dBm',
+                color: Colors.green,
+              ),
+              _SignalDataBox(
+                label: 'BW',
+                value: _selectedSignal!.bandwidth.toStringAsFixed(1),
+                unit: 'MHz',
+                color: Colors.purple,
+              ),
+              _SignalDataBox(
+                label: 'MOD',
+                value: _selectedSignal!.modulation.name.toUpperCase(),
+                unit: '',
+                color: Colors.amber,
+              ),
+            ],
+          ),
+          // Identification buttons or result
+          if (!_selectedSignal!.identified) ...[
+            const SizedBox(height: 12),
+            const Text(
+              'IDENTIFY SIGNAL TYPE:',
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: 10,
+                fontFamily: 'monospace',
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: SignalType.values.map((type) {
+                return _IdentifyButton(
+                  type: type,
+                  onTap: () => _identifySignal(type),
+                );
+              }).toList(),
+            ),
+          ] else ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _selectedSignal!.correctlyIdentified
+                    ? Colors.green.withValues(alpha: 0.15)
+                    : Colors.red.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: _selectedSignal!.correctlyIdentified
+                      ? Colors.green.withValues(alpha: 0.4)
+                      : Colors.red.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _selectedSignal!.correctlyIdentified
+                        ? Icons.check_circle
+                        : Icons.info,
+                    color: _selectedSignal!.correctlyIdentified
+                        ? Colors.green
+                        : Colors.red,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Signal Type: ${_selectedSignal!.type.titleTh}',
+                      style: TextStyle(
+                        color: _selectedSignal!.correctlyIdentified
+                            ? Colors.green
+                            : Colors.red,
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
+          ],
+        ],
+      ),
+    ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.05);
+  }
 
-            // Signal identification panel
-            if (_selectedSignal != null)
-              Container(
-                margin: const EdgeInsets.all(AppSizes.paddingM),
-                padding: const EdgeInsets.all(AppSizes.paddingM),
-                decoration: BoxDecoration(
-                  color: AppColors.card,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusM),
-                  border: Border.all(
-                    color: _selectedSignal!.identified
-                        ? (_selectedSignal!.correctlyIdentified
-                            ? AppColors.success
-                            : AppColors.error)
-                        : AppColors.esColor,
+  Widget _buildControlButtons() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: _isScanning ? _stopScanning : _startScanning,
+                icon: Icon(
+                  _isScanning ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                  size: 24,
+                ),
+                label: Text(
+                  _isScanning ? 'STOP SCAN' : 'START SCAN',
+                  style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.signal_cellular_alt,
-                            color: AppColors.esColor, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'สัญญาณที่เลือก',
-                          style: AppTextStyles.titleSmall.copyWith(
-                            color: AppColors.esColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _SignalInfo(
-                          label: 'ความถี่',
-                          value: '${_selectedSignal!.frequency.toStringAsFixed(1)} MHz',
-                        ),
-                        _SignalInfo(
-                          label: 'กำลังส่ง',
-                          value: '${_selectedSignal!.power.toStringAsFixed(0)} dBm',
-                        ),
-                        _SignalInfo(
-                          label: 'แบนด์วิดท์',
-                          value: '${_selectedSignal!.bandwidth.toStringAsFixed(1)} MHz',
-                        ),
-                      ],
-                    ),
-                    if (!_selectedSignal!.identified) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        'ระบุประเภทสัญญาณ:',
-                        style: AppTextStyles.labelMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: SignalType.values.map((type) {
-                          return _IdentifyButton(
-                            type: type,
-                            onTap: () => _identifySignal(type),
-                          );
-                        }).toList(),
-                      ),
-                    ] else ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: _selectedSignal!.correctlyIdentified
-                              ? AppColors.successLight
-                              : AppColors.errorLight,
-                          borderRadius: BorderRadius.circular(AppSizes.radiusS),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              _selectedSignal!.correctlyIdentified
-                                  ? Icons.check_circle
-                                  : Icons.info,
-                              color: _selectedSignal!.correctlyIdentified
-                                  ? AppColors.success
-                                  : AppColors.error,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'สัญญาณนี้คือ: ${_selectedSignal!.type.titleTh}',
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: _selectedSignal!.correctlyIdentified
-                                      ? AppColors.success
-                                      : AppColors.error,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.1),
-
-            // Control button
-            Padding(
-              padding: const EdgeInsets.all(AppSizes.paddingL),
-              child: SizedBox(
-                width: double.infinity,
-                height: AppSizes.buttonHeightL,
-                child: ElevatedButton.icon(
-                  onPressed: _isScanning ? _stopScanning : _startScanning,
-                  icon: Icon(_isScanning ? Icons.stop : Icons.play_arrow),
-                  label: Text(_isScanning ? 'หยุดสแกน' : 'เริ่มสแกน'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        _isScanning ? AppColors.error : AppColors.spectrumColor,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      _isScanning ? Colors.red[700] : Colors.cyan[700],
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
                 ),
               ),
-            ).animate(delay: 400.ms).fadeIn().slideY(begin: 0.2),
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
-    ),
-    );
+    ).animate(delay: 400.ms).fadeIn().slideY(begin: 0.2);
   }
 
   void _handleSpectrumTap(Offset position) {
     if (_signals.isEmpty) return;
 
-    // Convert tap position to frequency
     final renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
 
-    // Find closest detected signal to tap
     SimSignal? closest;
     double minDistance = double.infinity;
 
+    final minFreq = _centerFrequency - _span / 2;
+    final maxFreq = _centerFrequency + _span / 2;
+
     for (final signal in _signals) {
       if (!signal.detected) continue;
-
-      // Calculate signal position
-      final minFreq = _centerFrequency - _span / 2;
-      final maxFreq = _centerFrequency + _span / 2;
       if (signal.frequency < minFreq || signal.frequency > maxFreq) continue;
 
       final normalizedFreq = (signal.frequency - minFreq) / _span;
       final signalX = normalizedFreq * renderBox.size.width;
       final distance = (signalX - position.dx).abs();
 
-      if (distance < minDistance && distance < 30) {
+      if (distance < minDistance && distance < 40) {
         minDistance = distance;
         closest = signal;
       }
@@ -474,61 +1040,123 @@ class _SpectrumSimScreenState extends State<SpectrumSimScreen>
   }
 }
 
-class _InfoItem extends StatelessWidget {
+// ============== Custom Widgets ==============
+
+class _InfoChip extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
   final Color color;
+  final bool isActive;
 
-  const _InfoItem({
+  const _InfoChip({
     required this.icon,
     required this.label,
     required this.value,
+    required this.color,
+    required this.isActive,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isActive ? color.withValues(alpha: 0.15) : Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: isActive ? color.withValues(alpha: 0.5) : Colors.white24,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: isActive ? color : Colors.white38, size: 16),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: TextStyle(
+              color: isActive ? Colors.white : Colors.white54,
+              fontSize: 12,
+              fontFamily: 'monospace',
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              color: isActive ? color.withValues(alpha: 0.8) : Colors.white38,
+              fontSize: 8,
+              fontFamily: 'monospace',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SignalDataBox extends StatelessWidget {
+  final String label;
+  final String value;
+  final String unit;
+  final Color color;
+
+  const _SignalDataBox({
+    required this.label,
+    required this.value,
+    required this.unit,
     required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 20),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: AppTextStyles.titleMedium.copyWith(
-            color: AppColors.textPrimary,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: color.withValues(alpha: 0.7),
+              fontSize: 8,
+              fontFamily: 'monospace',
+            ),
           ),
-        ),
-        Text(
-          label,
-          style: AppTextStyles.labelSmall,
-        ),
-      ],
-    );
-  }
-}
-
-class _SignalInfo extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _SignalInfo({
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: AppTextStyles.titleMedium.copyWith(
-            color: AppColors.textPrimary,
+          const SizedBox(height: 2),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (unit.isNotEmpty) ...[
+                const SizedBox(width: 2),
+                Text(
+                  unit,
+                  style: TextStyle(
+                    color: color.withValues(alpha: 0.6),
+                    fontSize: 9,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ],
+            ],
           ),
-        ),
-        Text(label, style: AppTextStyles.labelSmall),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -548,18 +1176,21 @@ class _IdentifyButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppSizes.radiusS),
+        borderRadius: BorderRadius.circular(6),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: type.color.withAlpha(30),
-            borderRadius: BorderRadius.circular(AppSizes.radiusS),
-            border: Border.all(color: type.color.withAlpha(100)),
+            color: type.color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: type.color.withValues(alpha: 0.4)),
           ),
           child: Text(
             type.titleTh,
-            style: AppTextStyles.labelSmall.copyWith(
+            style: TextStyle(
               color: type.color,
+              fontSize: 11,
+              fontFamily: 'monospace',
+              fontWeight: FontWeight.bold,
             ),
           ),
         ),
@@ -568,20 +1199,37 @@ class _IdentifyButton extends StatelessWidget {
   }
 }
 
-/// Spectrum display painter
-class SpectrumDisplayPainter extends CustomPainter {
+// ============== Enhanced Spectrum Painter ==============
+
+class EnhancedSpectrumPainter extends CustomPainter {
   final List<SimSignal> signals;
   final double centerFrequency;
   final double span;
   final double scanProgress;
   final SimSignal? selectedSignal;
+  final double referenceLevel;
+  final double noiseFloor;
+  final bool showPeakHold;
+  final Map<int, double> peakHoldValues;
+  final List<SpectrumMarker> markers;
+  final bool showMarkers;
+  final double glowIntensity;
+  final int noiseSeed;
 
-  SpectrumDisplayPainter({
+  EnhancedSpectrumPainter({
     required this.signals,
     required this.centerFrequency,
     required this.span,
     required this.scanProgress,
     this.selectedSignal,
+    required this.referenceLevel,
+    required this.noiseFloor,
+    required this.showPeakHold,
+    required this.peakHoldValues,
+    required this.markers,
+    required this.showMarkers,
+    required this.glowIntensity,
+    required this.noiseSeed,
   });
 
   @override
@@ -589,24 +1237,39 @@ class SpectrumDisplayPainter extends CustomPainter {
     final minFreq = centerFrequency - span / 2;
     final maxFreq = centerFrequency + span / 2;
 
-    // Draw grid
-    _drawGrid(canvas, size, minFreq, maxFreq);
+    // Draw gradient background
+    _drawBackground(canvas, size);
 
-    // Draw noise floor
-    _drawNoiseFloor(canvas, size);
+    // Draw grid with enhanced styling
+    _drawEnhancedGrid(canvas, size, minFreq, maxFreq);
 
-    // Draw signals
+    // Draw noise floor with animation
+    _drawAnimatedNoiseFloor(canvas, size);
+
+    // Draw peak hold trace
+    if (showPeakHold && peakHoldValues.isNotEmpty) {
+      _drawPeakHold(canvas, size, minFreq, maxFreq);
+    }
+
+    // Draw signals with 3D-like effects
     for (final signal in signals) {
       if (signal.detected &&
           signal.frequency >= minFreq &&
           signal.frequency <= maxFreq) {
-        _drawSignal(canvas, size, signal, minFreq, maxFreq);
+        _drawEnhancedSignal(canvas, size, signal, minFreq, maxFreq);
       }
     }
 
-    // Draw scan line
+    // Draw markers
+    if (showMarkers) {
+      for (final marker in markers) {
+        _drawMarker(canvas, size, marker, minFreq, maxFreq);
+      }
+    }
+
+    // Draw scan line with glow
     if (scanProgress > 0) {
-      _drawScanLine(canvas, size);
+      _drawEnhancedScanLine(canvas, size);
     }
 
     // Draw frequency labels
@@ -616,250 +1279,582 @@ class SpectrumDisplayPainter extends CustomPainter {
     _drawPowerLabels(canvas, size);
   }
 
-  void _drawGrid(Canvas canvas, Size size, double minFreq, double maxFreq) {
-    final gridPaint = Paint()
-      ..color = Colors.green.withAlpha(30)
+  void _drawBackground(Canvas canvas, Size size) {
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    final gradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        const Color(0xFF001020),
+        const Color(0xFF000510),
+        const Color(0xFF000005),
+      ],
+    );
+    canvas.drawRect(rect, Paint()..shader = gradient.createShader(rect));
+  }
+
+  void _drawEnhancedGrid(
+      Canvas canvas, Size size, double minFreq, double maxFreq) {
+    // Major grid lines
+    final majorGridPaint = Paint()
+      ..color = Colors.cyan.withValues(alpha: 0.15)
+      ..strokeWidth = 1;
+
+    // Minor grid lines
+    final minorGridPaint = Paint()
+      ..color = Colors.cyan.withValues(alpha: 0.05)
       ..strokeWidth = 0.5;
 
     // Vertical lines (frequency)
-    for (int i = 0; i <= 10; i++) {
-      final x = size.width * i / 10;
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+    for (int i = 0; i <= 20; i++) {
+      final x = size.width * i / 20;
+      final paint = i % 4 == 0 ? majorGridPaint : minorGridPaint;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height - 20), paint);
     }
 
-    // Horizontal lines (power)
+    // Horizontal lines (power - 10 dB divisions)
     for (int i = 0; i <= 6; i++) {
       final y = size.height * i / 6;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+      final paint = i % 2 == 0 ? majorGridPaint : minorGridPaint;
+      canvas.drawLine(Offset(40, y), Offset(size.width, y), paint);
     }
-  }
 
-  void _drawNoiseFloor(Canvas canvas, Size size) {
-    final random = math.Random(42); // Fixed seed for consistent noise
-    final noisePaint = Paint()
-      ..color = Colors.green.withAlpha(60)
+    // Draw -3dB line (reference)
+    final refLineY = size.height * 0.05; // Near top
+    final refLinePaint = Paint()
+      ..color = Colors.red.withValues(alpha: 0.3)
       ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
-
-    final path = Path();
-    final noiseLevel = size.height * 0.85; // -90 dBm baseline
-
-    path.moveTo(0, noiseLevel + random.nextDouble() * 10 - 5);
-
-    for (int i = 1; i <= size.width.toInt(); i++) {
-      final noise = random.nextDouble() * 15 - 7.5;
-      path.lineTo(i.toDouble(), noiseLevel + noise);
-    }
-
-    canvas.drawPath(path, noisePaint);
+    // Make it dashed
+    _drawDashedLine(
+        canvas, Offset(40, refLineY), Offset(size.width, refLineY), refLinePaint);
   }
 
-  void _drawSignal(Canvas canvas, Size size, SimSignal signal,
-      double minFreq, double maxFreq) {
-    final normalizedFreq = (signal.frequency - minFreq) / (maxFreq - minFreq);
-    final x = normalizedFreq * size.width;
+  void _drawDashedLine(Canvas canvas, Offset start, Offset end, Paint paint) {
+    const dashWidth = 5.0;
+    const dashSpace = 3.0;
+    final distance = (end - start).distance;
+    final steps = (distance / (dashWidth + dashSpace)).ceil();
 
-    // Power level: -40 dBm at top, -100 dBm at bottom
-    final normalizedPower = (signal.power + 100) / 60;
-    final peakY = size.height * (1 - normalizedPower.clamp(0.0, 1.0));
+    for (int i = 0; i < steps; i++) {
+      final startOffset = start + (end - start) * (i * (dashWidth + dashSpace) / distance);
+      final endOffset = start +
+          (end - start) *
+              math.min((i * (dashWidth + dashSpace) + dashWidth) / distance, 1.0);
+      canvas.drawLine(startOffset, endOffset, paint);
+    }
+  }
 
-    // Signal width based on bandwidth
-    final bandwidthPixels = (signal.bandwidth / span) * size.width;
+  void _drawAnimatedNoiseFloor(Canvas canvas, Size size) {
+    final random = math.Random(noiseSeed);
+    final noiseY = _powerToY(noiseFloor, size);
 
-    // Create gradient for signal
-    final isSelected = selectedSignal == signal;
-    final signalPaint = Paint()
+    // Background noise fill
+    final noiseFillPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          isSelected
-              ? Colors.yellow.withAlpha(200)
-              : signal.type.color.withAlpha(200),
-          isSelected
-              ? Colors.yellow.withAlpha(50)
-              : signal.type.color.withAlpha(50),
+          Colors.green.withValues(alpha: 0.05),
+          Colors.green.withValues(alpha: 0.02),
         ],
-      ).createShader(Rect.fromLTWH(
-        x - bandwidthPixels / 2,
-        peakY,
-        bandwidthPixels,
-        size.height - peakY,
-      ));
+      ).createShader(Rect.fromLTWH(40, noiseY, size.width - 40, size.height - noiseY));
 
-    // Draw signal peak
-    final path = Path();
-    path.moveTo(x - bandwidthPixels / 2, size.height);
-    path.quadraticBezierTo(
-      x - bandwidthPixels / 4,
-      peakY + (size.height - peakY) * 0.3,
-      x,
-      peakY,
-    );
-    path.quadraticBezierTo(
-      x + bandwidthPixels / 4,
-      peakY + (size.height - peakY) * 0.3,
-      x + bandwidthPixels / 2,
-      size.height,
-    );
-    path.close();
+    final noiseFillPath = Path();
+    noiseFillPath.moveTo(40, size.height - 20);
 
-    canvas.drawPath(path, signalPaint);
+    for (double x = 40; x <= size.width; x += 2) {
+      final noise = random.nextDouble() * 15;
+      final y = noiseY + noise;
+      noiseFillPath.lineTo(x, y);
+    }
+    noiseFillPath.lineTo(size.width, size.height - 20);
+    noiseFillPath.close();
 
-    // Draw peak line
-    final peakLinePaint = Paint()
-      ..color = isSelected ? Colors.yellow : signal.type.color
-      ..strokeWidth = isSelected ? 2 : 1.5
+    canvas.drawPath(noiseFillPath, noiseFillPaint);
+
+    // Noise line
+    final noiseLinePaint = Paint()
+      ..color = Colors.green.withValues(alpha: 0.4)
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+
+    final noiseLinePath = Path();
+    noiseLinePath.moveTo(40, noiseY + random.nextDouble() * 10);
+
+    for (double x = 42; x <= size.width; x += 2) {
+      final noise = random.nextDouble() * 12 - 6;
+      noiseLinePath.lineTo(x, noiseY + noise);
+    }
+
+    canvas.drawPath(noiseLinePath, noiseLinePaint);
+  }
+
+  void _drawPeakHold(
+      Canvas canvas, Size size, double minFreq, double maxFreq) {
+    final peakPaint = Paint()
+      ..color = Colors.yellow.withValues(alpha: 0.6)
+      ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
 
     final peakPath = Path();
-    peakPath.moveTo(x - bandwidthPixels / 2, size.height * 0.9);
-    peakPath.quadraticBezierTo(
-      x - bandwidthPixels / 4,
-      peakY + (size.height - peakY) * 0.2,
-      x,
-      peakY,
-    );
-    peakPath.quadraticBezierTo(
-      x + bandwidthPixels / 4,
-      peakY + (size.height - peakY) * 0.2,
-      x + bandwidthPixels / 2,
-      size.height * 0.9,
-    );
+    bool started = false;
 
-    canvas.drawPath(peakPath, peakLinePaint);
+    for (final entry in peakHoldValues.entries) {
+      final x = 40 + (entry.key / 200) * (size.width - 40);
+      final y = _powerToY(entry.value, size);
 
-    // Draw selection indicator
-    if (isSelected) {
-      final markerPaint = Paint()
-        ..color = Colors.yellow
-        ..strokeWidth = 2;
-
-      canvas.drawLine(
-        Offset(x, 0),
-        Offset(x, size.height),
-        markerPaint..color = Colors.yellow.withAlpha(100),
-      );
-
-      canvas.drawCircle(Offset(x, peakY), 5, markerPaint);
+      if (!started) {
+        peakPath.moveTo(x, y);
+        started = true;
+      } else {
+        peakPath.lineTo(x, y);
+      }
     }
 
-    // Draw identification marker
-    if (signal.identified) {
-      final iconPaint = Paint()
-        ..color = signal.correctlyIdentified ? Colors.green : Colors.red;
-
-      canvas.drawCircle(
-        Offset(x, peakY - 15),
-        8,
-        iconPaint,
-      );
+    if (started) {
+      canvas.drawPath(peakPath, peakPaint);
     }
   }
 
-  void _drawScanLine(Canvas canvas, Size size) {
-    final scanPaint = Paint()
-      ..shader = LinearGradient(
-        colors: [
-          Colors.transparent,
-          Colors.green.withAlpha(150),
-          Colors.green,
-        ],
-        stops: const [0.0, 0.7, 1.0],
-      ).createShader(Rect.fromLTWH(
-        scanProgress * size.width - 30,
-        0,
-        30,
-        size.height,
-      ));
+  void _drawEnhancedSignal(Canvas canvas, Size size, SimSignal signal,
+      double minFreq, double maxFreq) {
+    final normalizedFreq = (signal.frequency - minFreq) / (maxFreq - minFreq);
+    final x = 40 + normalizedFreq * (size.width - 40);
+    final peakY = _powerToY(signal.power, size);
+    final bandwidthPixels = (signal.bandwidth / span) * (size.width - 40);
+    final isSelected = selectedSignal == signal;
 
-    canvas.drawRect(
-      Rect.fromLTWH(
-        scanProgress * size.width - 30,
-        0,
-        30,
-        size.height,
-      ),
-      scanPaint,
+    // Glow effect (outer)
+    if (isSelected || signal.power > -60) {
+      final glowPaint = Paint()
+        ..color = (isSelected ? Colors.yellow : signal.type.color)
+            .withValues(alpha: 0.2 + glowIntensity * 0.15)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
+
+      final glowPath = _createSignalPath(x, peakY, bandwidthPixels, size);
+      canvas.drawPath(glowPath, glowPaint);
+    }
+
+    // Signal fill with gradient (3D effect)
+    final signalGradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        isSelected
+            ? Colors.yellow.withValues(alpha: 0.8)
+            : signal.type.color.withValues(alpha: 0.7),
+        isSelected
+            ? Colors.yellow.withValues(alpha: 0.3)
+            : signal.type.color.withValues(alpha: 0.2),
+        isSelected
+            ? Colors.yellow.withValues(alpha: 0.05)
+            : signal.type.color.withValues(alpha: 0.02),
+      ],
+      stops: const [0.0, 0.5, 1.0],
     );
 
-    // Scan line
+    final signalFillPaint = Paint()
+      ..shader = signalGradient.createShader(
+        Rect.fromLTWH(x - bandwidthPixels / 2, peakY, bandwidthPixels, size.height - 20 - peakY),
+      );
+
+    final signalPath = _createSignalPath(x, peakY, bandwidthPixels, size);
+    canvas.drawPath(signalPath, signalFillPaint);
+
+    // Signal outline with glow
+    final outlinePaint = Paint()
+      ..color = isSelected ? Colors.yellow : signal.type.color
+      ..strokeWidth = isSelected ? 2.5 : 1.5
+      ..style = PaintingStyle.stroke
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, isSelected ? 3 : 1);
+
+    final outlinePath = _createSignalOutlinePath(x, peakY, bandwidthPixels, size);
+    canvas.drawPath(outlinePath, outlinePaint);
+
+    // Peak indicator
+    if (isSelected) {
+      // Vertical marker line
+      final markerPaint = Paint()
+        ..color = Colors.yellow.withValues(alpha: 0.5)
+        ..strokeWidth = 1;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height - 20), markerPaint);
+
+      // Crosshair
+      canvas.drawCircle(
+        Offset(x, peakY),
+        6,
+        Paint()
+          ..color = Colors.yellow.withValues(alpha: 0.3)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+      );
+      canvas.drawCircle(
+        Offset(x, peakY),
+        4,
+        Paint()..color = Colors.yellow,
+      );
+      canvas.drawCircle(
+        Offset(x, peakY),
+        2,
+        Paint()..color = Colors.black,
+      );
+    }
+
+    // Identification marker
+    if (signal.identified) {
+      final markerColor =
+          signal.correctlyIdentified ? Colors.green : Colors.red;
+      canvas.drawCircle(
+        Offset(x, peakY - 12),
+        6,
+        Paint()
+          ..color = markerColor
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+      );
+      canvas.drawCircle(
+        Offset(x, peakY - 12),
+        5,
+        Paint()..color = markerColor,
+      );
+
+      // Checkmark or X
+      final iconPaint = Paint()
+        ..color = Colors.white
+        ..strokeWidth = 1.5
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+
+      if (signal.correctlyIdentified) {
+        canvas.drawLine(
+          Offset(x - 2, peakY - 12),
+          Offset(x, peakY - 10),
+          iconPaint,
+        );
+        canvas.drawLine(
+          Offset(x, peakY - 10),
+          Offset(x + 3, peakY - 15),
+          iconPaint,
+        );
+      } else {
+        canvas.drawLine(
+          Offset(x - 2, peakY - 14),
+          Offset(x + 2, peakY - 10),
+          iconPaint,
+        );
+        canvas.drawLine(
+          Offset(x - 2, peakY - 10),
+          Offset(x + 2, peakY - 14),
+          iconPaint,
+        );
+      }
+    }
+  }
+
+  Path _createSignalPath(double x, double peakY, double bandwidth, Size size) {
+    final path = Path();
+    final baseY = size.height - 20;
+    final halfBw = bandwidth / 2;
+
+    path.moveTo(x - halfBw, baseY);
+    path.quadraticBezierTo(
+      x - halfBw * 0.7,
+      peakY + (baseY - peakY) * 0.4,
+      x - halfBw * 0.3,
+      peakY + (baseY - peakY) * 0.1,
+    );
+    path.quadraticBezierTo(x, peakY, x + halfBw * 0.3, peakY + (baseY - peakY) * 0.1);
+    path.quadraticBezierTo(
+      x + halfBw * 0.7,
+      peakY + (baseY - peakY) * 0.4,
+      x + halfBw,
+      baseY,
+    );
+    path.close();
+    return path;
+  }
+
+  Path _createSignalOutlinePath(
+      double x, double peakY, double bandwidth, Size size) {
+    final path = Path();
+    final baseY = size.height - 20;
+    final halfBw = bandwidth / 2;
+
+    path.moveTo(x - halfBw, baseY);
+    path.quadraticBezierTo(
+      x - halfBw * 0.7,
+      peakY + (baseY - peakY) * 0.4,
+      x - halfBw * 0.3,
+      peakY + (baseY - peakY) * 0.1,
+    );
+    path.quadraticBezierTo(x, peakY, x + halfBw * 0.3, peakY + (baseY - peakY) * 0.1);
+    path.quadraticBezierTo(
+      x + halfBw * 0.7,
+      peakY + (baseY - peakY) * 0.4,
+      x + halfBw,
+      baseY,
+    );
+    return path;
+  }
+
+  void _drawMarker(Canvas canvas, Size size, SpectrumMarker marker,
+      double minFreq, double maxFreq) {
+    if (marker.frequency < minFreq || marker.frequency > maxFreq) return;
+
+    final normalizedFreq = (marker.frequency - minFreq) / (maxFreq - minFreq);
+    final x = 40 + normalizedFreq * (size.width - 40);
+    final y = _powerToY(marker.power, size);
+
+    // Marker line
     final linePaint = Paint()
-      ..color = Colors.green
-      ..strokeWidth = 2;
+      ..color = Colors.orange.withValues(alpha: 0.6)
+      ..strokeWidth = 1;
+    canvas.drawLine(Offset(x, 0), Offset(x, size.height - 20), linePaint);
+
+    // Marker diamond
+    final markerPath = Path()
+      ..moveTo(x, y - 8)
+      ..lineTo(x + 5, y)
+      ..lineTo(x, y + 8)
+      ..lineTo(x - 5, y)
+      ..close();
+
+    canvas.drawPath(
+      markerPath,
+      Paint()
+        ..color = Colors.orange
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawPath(
+      markerPath,
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
+
+    // Marker label
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: 'M${marker.id}',
+        style: const TextStyle(
+          color: Colors.orange,
+          fontSize: 10,
+          fontFamily: 'monospace',
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(canvas, Offset(x - textPainter.width / 2, y - 22));
+  }
+
+  void _drawEnhancedScanLine(Canvas canvas, Size size) {
+    final scanX = 40 + scanProgress * (size.width - 40);
+
+    // Scan sweep gradient
+    final sweepGradient = LinearGradient(
+      colors: [
+        Colors.transparent,
+        Colors.cyan.withValues(alpha: 0.1),
+        Colors.cyan.withValues(alpha: 0.3),
+        Colors.cyan.withValues(alpha: 0.6),
+      ],
+      stops: const [0.0, 0.5, 0.8, 1.0],
+    );
+
+    final sweepRect = Rect.fromLTWH(
+      math.max(40, scanX - 50),
+      0,
+      50,
+      size.height - 20,
+    );
+
+    canvas.drawRect(
+      sweepRect,
+      Paint()..shader = sweepGradient.createShader(sweepRect),
+    );
+
+    // Main scan line with glow
+    canvas.drawLine(
+      Offset(scanX, 0),
+      Offset(scanX, size.height - 20),
+      Paint()
+        ..color = Colors.cyan.withValues(alpha: 0.5)
+        ..strokeWidth = 4
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+    );
 
     canvas.drawLine(
-      Offset(scanProgress * size.width, 0),
-      Offset(scanProgress * size.width, size.height),
-      linePaint,
+      Offset(scanX, 0),
+      Offset(scanX, size.height - 20),
+      Paint()
+        ..color = Colors.cyan
+        ..strokeWidth = 2,
     );
   }
 
   void _drawFrequencyLabels(
       Canvas canvas, Size size, double minFreq, double maxFreq) {
-    final textPainter = TextPainter(
-      textDirection: TextDirection.ltr,
-    );
+    final textPainter = TextPainter(textDirection: TextDirection.ltr);
 
     for (int i = 0; i <= 4; i++) {
       final freq = minFreq + (maxFreq - minFreq) * i / 4;
+      final x = 40 + (size.width - 40) * i / 4;
+
       textPainter.text = TextSpan(
         text: '${freq.toInt()}',
         style: TextStyle(
-          color: Colors.green.withAlpha(180),
+          color: Colors.cyan.withValues(alpha: 0.8),
           fontSize: 10,
+          fontFamily: 'monospace',
         ),
       );
       textPainter.layout();
       textPainter.paint(
         canvas,
-        Offset(
-          size.width * i / 4 - textPainter.width / 2,
-          size.height - textPainter.height - 2,
+        Offset(x - textPainter.width / 2, size.height - 16),
+      );
+    }
+
+    // MHz label
+    textPainter.text = const TextSpan(
+      text: 'MHz',
+      style: TextStyle(
+        color: Colors.cyan,
+        fontSize: 9,
+        fontFamily: 'monospace',
+      ),
+    );
+    textPainter.layout();
+    textPainter.paint(canvas, Offset(size.width - 25, size.height - 16));
+  }
+
+  void _drawPowerLabels(Canvas canvas, Size size) {
+    final textPainter = TextPainter(textDirection: TextDirection.ltr);
+
+    final powers = [-40, -50, -60, -70, -80, -90, -100];
+    for (int i = 0; i < powers.length; i++) {
+      final y = (size.height - 20) * i / (powers.length - 1);
+
+      textPainter.text = TextSpan(
+        text: '${powers[i]}',
+        style: TextStyle(
+          color: Colors.green.withValues(alpha: 0.8),
+          fontSize: 9,
+          fontFamily: 'monospace',
         ),
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(4, y - textPainter.height / 2),
       );
     }
   }
 
-  void _drawPowerLabels(Canvas canvas, Size size) {
-    final textPainter = TextPainter(
-      textDirection: TextDirection.ltr,
-    );
+  double _powerToY(double power, Size size) {
+    // Map power from -40 to -100 dBm to screen Y
+    final normalized = (power - referenceLevel) / (noiseFloor - 10 - referenceLevel);
+    return normalized.clamp(0.0, 1.0) * (size.height - 20);
+  }
 
-    final powers = [-40, -60, -80, -100];
-    for (int i = 0; i < powers.length; i++) {
-      final y = size.height * i / (powers.length - 1);
-      textPainter.text = TextSpan(
-        text: '${powers[i]}',
-        style: TextStyle(
-          color: Colors.green.withAlpha(180),
-          fontSize: 10,
-        ),
-      );
-      textPainter.layout();
-      textPainter.paint(
-        canvas,
-        Offset(2, y - textPainter.height / 2),
-      );
+  @override
+  bool shouldRepaint(covariant EnhancedSpectrumPainter oldDelegate) {
+    return oldDelegate.scanProgress != scanProgress ||
+        oldDelegate.selectedSignal != selectedSignal ||
+        oldDelegate.centerFrequency != centerFrequency ||
+        oldDelegate.span != span ||
+        oldDelegate.glowIntensity != glowIntensity ||
+        oldDelegate.noiseSeed != noiseSeed ||
+        oldDelegate.showPeakHold != showPeakHold;
+  }
+}
+
+// ============== Waterfall Painter ==============
+
+class WaterfallPainter extends CustomPainter {
+  final List<List<double>> history;
+  final double noiseFloor;
+  final double referenceLevel;
+
+  WaterfallPainter({
+    required this.history,
+    required this.noiseFloor,
+    required this.referenceLevel,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (history.isEmpty) return;
+
+    final rowHeight = size.height / history.length;
+    final colWidth = size.width / (history.first.length);
+
+    for (int row = 0; row < history.length; row++) {
+      final line = history[row];
+      final y = row * rowHeight;
+
+      for (int col = 0; col < line.length; col++) {
+        final power = line[col];
+        final x = col * colWidth;
+
+        // Map power to color intensity
+        final intensity = ((power - noiseFloor) / (referenceLevel - noiseFloor))
+            .clamp(0.0, 1.0);
+
+        // Color gradient: blue -> cyan -> green -> yellow -> red
+        Color color;
+        if (intensity < 0.25) {
+          color = Color.lerp(
+            const Color(0xFF000033),
+            const Color(0xFF0033AA),
+            intensity * 4,
+          )!;
+        } else if (intensity < 0.5) {
+          color = Color.lerp(
+            const Color(0xFF0033AA),
+            const Color(0xFF00AAAA),
+            (intensity - 0.25) * 4,
+          )!;
+        } else if (intensity < 0.75) {
+          color = Color.lerp(
+            const Color(0xFF00AAAA),
+            const Color(0xFFAAFF00),
+            (intensity - 0.5) * 4,
+          )!;
+        } else {
+          color = Color.lerp(
+            const Color(0xFFAAFF00),
+            const Color(0xFFFF3300),
+            (intensity - 0.75) * 4,
+          )!;
+        }
+
+        canvas.drawRect(
+          Rect.fromLTWH(x, y, colWidth + 1, rowHeight + 1),
+          Paint()..color = color,
+        );
+      }
     }
   }
 
   @override
-  bool shouldRepaint(covariant SpectrumDisplayPainter oldDelegate) {
-    return oldDelegate.scanProgress != scanProgress ||
-        oldDelegate.selectedSignal != selectedSignal ||
-        oldDelegate.centerFrequency != centerFrequency ||
-        oldDelegate.span != span;
+  bool shouldRepaint(covariant WaterfallPainter oldDelegate) {
+    return true; // Always repaint for smooth animation
   }
 }
 
-/// Simulated signal
+// ============== Data Models ==============
+
 class SimSignal {
   final int id;
-  final double frequency; // MHz
-  final double bandwidth; // MHz
-  final double power; // dBm
+  final double frequency;
+  final double bandwidth;
+  final double power;
   final SignalType type;
+  final ModulationType modulation;
+  final bool isIntermittent;
   bool detected = false;
   bool identified = false;
   bool correctlyIdentified = false;
@@ -871,15 +1866,37 @@ class SimSignal {
     required this.bandwidth,
     required this.power,
     required this.type,
+    required this.modulation,
+    this.isIntermittent = false,
   });
 }
 
-/// Signal type
+class SpectrumMarker {
+  final int id;
+  final double frequency;
+  final double power;
+
+  SpectrumMarker({
+    required this.id,
+    required this.frequency,
+    required this.power,
+  });
+}
+
 enum SignalType {
   communication,
   radar,
   navigation,
-  unknown,
+  broadcast,
+  dataLink,
+}
+
+enum ModulationType {
+  am,
+  fm,
+  psk,
+  fsk,
+  ofdm,
 }
 
 extension SignalTypeExtension on SignalType {
@@ -891,21 +1908,25 @@ extension SignalTypeExtension on SignalType {
         return 'เรดาร์';
       case SignalType.navigation:
         return 'นำทาง';
-      case SignalType.unknown:
-        return 'ไม่ทราบ';
+      case SignalType.broadcast:
+        return 'กระจายเสียง';
+      case SignalType.dataLink:
+        return 'Data Link';
     }
   }
 
   Color get color {
     switch (this) {
       case SignalType.communication:
-        return AppColors.accentBlue;
+        return Colors.cyan;
       case SignalType.radar:
-        return AppColors.radarColor;
+        return Colors.orange;
       case SignalType.navigation:
-        return AppColors.gpsColor;
-      case SignalType.unknown:
-        return AppColors.warning;
+        return Colors.green;
+      case SignalType.broadcast:
+        return Colors.purple;
+      case SignalType.dataLink:
+        return Colors.pink;
     }
   }
 }
