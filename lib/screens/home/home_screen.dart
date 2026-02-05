@@ -16,6 +16,7 @@ import '../learning/flashcard_screen.dart';
 import '../learning/module_lessons_screen.dart';
 import '../profile/profile_screen.dart';
 import '../quiz/quiz_screen.dart';
+import '../campaign/campaign_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -402,6 +403,109 @@ class _DashboardTab extends StatelessWidget {
                     ),
                   ),
                 ).animate(delay: 600.ms).fadeIn(duration: 500.ms).slideY(begin: 0.1, end: 0),
+
+                const SizedBox(height: AppSizes.paddingM),
+
+                // Campaign Mode - NEW!
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CampaignScreen(),
+                    ),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSizes.paddingM),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppColors.warning.withValues(alpha: 0.15),
+                          AppColors.eaColor.withValues(alpha: 0.1),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(AppSizes.radiusL),
+                      border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.4),
+                        width: 2,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [AppColors.warning, AppColors.eaColor],
+                            ),
+                            borderRadius: BorderRadius.circular(AppSizes.radiusM),
+                          ),
+                          child: const Icon(
+                            Icons.military_tech,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: AppSizes.paddingM),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    '🎮 ภารกิจ Campaign',
+                                    style: AppTextStyles.titleMedium.copyWith(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.error,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      'NEW',
+                                      style: AppTextStyles.labelSmall.copyWith(
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '5 แคมเปญ 20+ ภารกิจ - ฝึกปฏิบัติจริง!',
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning,
+                            borderRadius: BorderRadius.circular(AppSizes.radiusM),
+                          ),
+                          child: const Icon(
+                            Icons.play_arrow,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ).animate(delay: 650.ms).fadeIn(duration: 500.ms).slideY(begin: 0.1, end: 0),
 
                 const SizedBox(height: AppSizes.paddingXL),
 
