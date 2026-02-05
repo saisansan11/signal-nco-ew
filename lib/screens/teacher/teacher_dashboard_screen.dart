@@ -108,12 +108,17 @@ class _StudentsTab extends StatelessWidget {
 
         // Sort on client side to avoid Firestore composite index
         final studentDocs = snapshot.data?.docs ?? [];
+        // Filter only students (exclude teachers)
         final students = studentDocs
             .map((doc) => doc.data() as Map<String, dynamic>)
+            .where((user) => user['role'] == 'student')
             .toList();
+        // Sort by totalXP (which is inside progress object)
         students.sort((a, b) {
-          final aXP = (a['totalXP'] ?? 0) as int;
-          final bXP = (b['totalXP'] ?? 0) as int;
+          final aProgress = a['progress'] as Map<String, dynamic>?;
+          final bProgress = b['progress'] as Map<String, dynamic>?;
+          final aXP = (aProgress?['totalXP'] ?? 0) as int;
+          final bXP = (bProgress?['totalXP'] ?? 0) as int;
           return bXP.compareTo(aXP); // Descending
         });
 
@@ -161,10 +166,12 @@ class _StudentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final name = student['displayName'] ?? 'ไม่ระบุชื่อ';
     final email = student['email'] ?? '';
-    final totalXP = student['totalXP'] ?? 0;
-    final level = ((totalXP as int) / 100).floor() + 1;
-    final streak = student['currentStreak'] ?? 0;
-    final lessonsCompleted = student['lessonsCompleted'] ?? 0;
+    // Access progress data from nested object
+    final progress = student['progress'] as Map<String, dynamic>?;
+    final totalXP = (progress?['totalXP'] ?? 0) as int;
+    final level = (totalXP / 100).floor() + 1;
+    final streak = (progress?['currentStreak'] ?? 0) as int;
+    final lessonsCompleted = (progress?['completedLessons'] as List?)?.length ?? 0;
 
     return Card(
       color: AppColors.surface,
@@ -299,12 +306,15 @@ class _StudentDetailSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final name = student['displayName'] ?? 'ไม่ระบุชื่อ';
     final email = student['email'] ?? '';
-    final totalXP = student['totalXP'] ?? 0;
-    final level = ((totalXP as int) / 100).floor() + 1;
-    final streak = student['currentStreak'] ?? 0;
-    final lessonsCompleted = student['lessonsCompleted'] ?? 0;
-    final quizzesPassed = student['quizzesPassed'] ?? 0;
-    final flashcardsStudied = student['flashcardsStudied'] ?? 0;
+    // Access progress data from nested object
+    final progress = student['progress'] as Map<String, dynamic>?;
+    final totalXP = (progress?['totalXP'] ?? 0) as int;
+    final level = (totalXP / 100).floor() + 1;
+    final streak = (progress?['currentStreak'] ?? 0) as int;
+    final lessonsCompleted = (progress?['completedLessons'] as List?)?.length ?? 0;
+    final quizScores = progress?['quizScores'] as Map<String, dynamic>?;
+    final quizzesPassed = quizScores?.length ?? 0;
+    final flashcardsStudied = 0; // TODO: Add flashcard tracking if needed
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -496,12 +506,17 @@ class _LeaderboardTab extends StatelessWidget {
 
         // Sort on client side and take top 20
         final studentDocs = snapshot.data?.docs ?? [];
+        // Filter only students (exclude teachers)
         final students = studentDocs
             .map((doc) => doc.data() as Map<String, dynamic>)
+            .where((user) => user['role'] == 'student')
             .toList();
+        // Sort by totalXP (which is inside progress object)
         students.sort((a, b) {
-          final aXP = (a['totalXP'] ?? 0) as int;
-          final bXP = (b['totalXP'] ?? 0) as int;
+          final aProgress = a['progress'] as Map<String, dynamic>?;
+          final bProgress = b['progress'] as Map<String, dynamic>?;
+          final aXP = (aProgress?['totalXP'] ?? 0) as int;
+          final bXP = (bProgress?['totalXP'] ?? 0) as int;
           return bXP.compareTo(aXP);
         });
         final top20 = students.take(20).toList();
@@ -516,7 +531,8 @@ class _LeaderboardTab extends StatelessWidget {
           itemBuilder: (context, index) {
             final student = top20[index];
             final name = student['displayName'] ?? 'ไม่ระบุชื่อ';
-            final totalXP = student['totalXP'] ?? 0;
+            final progress = student['progress'] as Map<String, dynamic>?;
+            final totalXP = (progress?['totalXP'] ?? 0) as int;
 
             return Container(
               margin: const EdgeInsets.only(bottom: 8),

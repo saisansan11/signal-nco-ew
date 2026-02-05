@@ -680,14 +680,10 @@ class _StudentsTab extends StatelessWidget {
             ),
           ),
 
-          // Student List
+          // Student List - simplified query with client-side sorting
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('users')
-                  .where('role', isEqualTo: 'student')
-                  .orderBy('totalXP', descending: true)
-                  .snapshots(),
+              stream: FirebaseFirestore.instance.collection('users').snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -696,15 +692,31 @@ class _StudentsTab extends StatelessWidget {
                 if (snapshot.hasError) {
                   return Center(
                     child: Text(
-                      'เกิดข้อผิดพลาด',
+                      'เกิดข้อผิดพลาด: ${snapshot.error}',
                       style: TextStyle(color: AppColors.error),
                     ),
                   );
                 }
 
-                final students = snapshot.data?.docs ?? [];
+                // Filter students and sort by XP on client side
+                final allDocs = snapshot.data?.docs ?? [];
+                final studentDocs = allDocs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return data['role'] == 'student';
+                }).toList();
 
-                if (students.isEmpty) {
+                // Sort by totalXP (inside progress object)
+                studentDocs.sort((a, b) {
+                  final aData = a.data() as Map<String, dynamic>;
+                  final bData = b.data() as Map<String, dynamic>;
+                  final aProgress = aData['progress'] as Map<String, dynamic>?;
+                  final bProgress = bData['progress'] as Map<String, dynamic>?;
+                  final aXP = (aProgress?['totalXP'] ?? 0) as int;
+                  final bXP = (bProgress?['totalXP'] ?? 0) as int;
+                  return bXP.compareTo(aXP);
+                });
+
+                if (studentDocs.isEmpty) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -728,9 +740,9 @@ class _StudentsTab extends StatelessWidget {
 
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: students.length,
+                  itemCount: studentDocs.length,
                   itemBuilder: (context, index) {
-                    final doc = students[index];
+                    final doc = studentDocs[index];
                     final student = doc.data() as Map<String, dynamic>;
                     return _StudentCard(
                       student: student,
@@ -913,23 +925,35 @@ class _LeaderboardTab extends StatelessWidget {
             ),
           ),
 
-          // Leaderboard
+          // Leaderboard - simplified query with client-side sorting
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('users')
-                  .where('role', isEqualTo: 'student')
-                  .orderBy('totalXP', descending: true)
-                  .limit(20)
-                  .snapshots(),
+              stream: FirebaseFirestore.instance.collection('users').snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final students = snapshot.data!.docs;
+                // Filter students and sort by XP on client side
+                final allDocs = snapshot.data!.docs;
+                final students = allDocs
+                    .map((doc) => doc.data() as Map<String, dynamic>)
+                    .where((user) => user['role'] == 'student')
+                    .toList();
 
-                if (students.isEmpty) {
+                // Sort by totalXP (inside progress object) - descending
+                students.sort((a, b) {
+                  final aProgress = a['progress'] as Map<String, dynamic>?;
+                  final bProgress = b['progress'] as Map<String, dynamic>?;
+                  final aXP = (aProgress?['totalXP'] ?? 0) as int;
+                  final bXP = (bProgress?['totalXP'] ?? 0) as int;
+                  return bXP.compareTo(aXP);
+                });
+
+                // Limit to top 20
+                final topStudents = students.take(20).toList();
+
+                if (topStudents.isEmpty) {
                   return Center(
                     child: Text(
                       'ยังไม่มีข้อมูล',
@@ -940,10 +964,9 @@ class _LeaderboardTab extends StatelessWidget {
 
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: students.length,
+                  itemCount: topStudents.length,
                   itemBuilder: (context, index) {
-                    final student =
-                        students[index].data() as Map<String, dynamic>;
+                    final student = topStudents[index];
                     return _LeaderboardItem(
                       student: student,
                       rank: index + 1,
@@ -968,7 +991,9 @@ class _LeaderboardItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = student['displayName'] ?? 'ไม่ระบุชื่อ';
-    final totalXP = (student['totalXP'] as int?) ?? 0;
+    // Access totalXP from nested progress object
+    final progress = student['progress'] as Map<String, dynamic>?;
+    final totalXP = (progress?['totalXP'] ?? 0) as int;
 
     Color? badgeColor;
     IconData? badgeIcon;
