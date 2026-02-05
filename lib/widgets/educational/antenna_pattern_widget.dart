@@ -68,55 +68,115 @@ class _AntennaPatternWidgetState extends State<AntennaPatternWidget>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.radarColor.withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.radarColor.withValues(alpha: 0.1),
-            blurRadius: 20,
-            spreadRadius: 5,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Use side-by-side layout for wider screens (>600px)
+        final isWideScreen = constraints.maxWidth > 600;
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.radarColor.withValues(alpha: 0.3)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.radarColor.withValues(alpha: 0.1),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Header
-          _buildHeader(),
-          const SizedBox(height: 16),
+          child: isWideScreen
+              ? _buildWideLayout()
+              : _buildCompactLayout(),
+        ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.1);
+      },
+    );
+  }
 
-          // Antenna Pattern Display
-          AspectRatio(
-            aspectRatio: 1,
-            child: _buildPatternDisplay(),
+  /// Layout for tablet/desktop - side by side
+  Widget _buildWideLayout() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Left: Visualization
+        Expanded(
+          flex: 5,
+          child: Column(
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 12),
+              AspectRatio(
+                aspectRatio: 1,
+                child: _buildPatternDisplay(),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+        ),
+        const SizedBox(width: 16),
+        // Right: Controls
+        Expanded(
+          flex: 4,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildAntennaTypeSelector(),
+              const SizedBox(height: 12),
+              _buildGainControl(),
+              const SizedBox(height: 12),
+              if (_selectedAntenna != AntennaType.omnidirectional) ...[
+                _buildBeamwidthControl(),
+                const SizedBox(height: 12),
+              ],
+              _buildControls(),
+              const SizedBox(height: 12),
+              _buildStats(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
-          // Antenna Type Selector
-          _buildAntennaTypeSelector(),
-          const SizedBox(height: 12),
+  /// Layout for mobile - compact with smaller visualization
+  Widget _buildCompactLayout() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Header
+        _buildHeader(),
+        const SizedBox(height: 12),
 
-          // Gain Control
-          _buildGainControl(),
-          const SizedBox(height: 12),
+        // Compact visualization - smaller aspect ratio
+        AspectRatio(
+          aspectRatio: 1.5, // Wider = smaller height
+          child: _buildPatternDisplay(),
+        ),
+        const SizedBox(height: 12),
 
-          // Beamwidth Control (for directional)
-          if (_selectedAntenna != AntennaType.omnidirectional)
-            _buildBeamwidthControl(),
+        // Antenna Type Selector
+        _buildAntennaTypeSelector(),
+        const SizedBox(height: 10),
 
-          // Controls
-          const SizedBox(height: 12),
-          _buildControls(),
+        // Gain Control
+        _buildGainControl(),
+        const SizedBox(height: 10),
 
-          // Stats
-          const SizedBox(height: 12),
-          _buildStats(),
+        // Beamwidth Control (for directional)
+        if (_selectedAntenna != AntennaType.omnidirectional) ...[
+          _buildBeamwidthControl(),
+          const SizedBox(height: 10),
         ],
-      ),
-    ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.1);
+
+        // Controls
+        _buildControls(),
+
+        // Stats
+        const SizedBox(height: 10),
+        _buildStats(),
+      ],
+    );
   }
 
   Widget _buildHeader() {

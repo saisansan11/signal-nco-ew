@@ -513,6 +513,74 @@ class _EWWorldMapWidgetState extends State<EWWorldMapWidget>
       color: AppColors.gpsColor,
       era: EWEra.modern,
     ),
+
+    // ============ ช่องแคบไต้หวัน ============
+    EWHistoricalEvent(
+      id: 'taiwan_strait',
+      title: 'วิกฤตช่องแคบไต้หวัน',
+      year: 2022,
+      location: 'ช่องแคบไต้หวัน',
+      lat: 24.5,
+      lon: 118.5,
+      description: 'จีนใช้ EW รบกวนการสื่อสารและเรดาร์\n'
+          'การฝึกซ้อมปิดล้อมไต้หวันด้วย EW\n'
+          'GPS Jamming และ Spoofing ในพื้นที่',
+      significance: 'EW ในการกดดันทางทหาร',
+      icon: Icons.waves,
+      color: AppColors.eaColor,
+      era: EWEra.modern,
+    ),
+
+    // ============ อินเดีย-ปากีสถาน ============
+    EWHistoricalEvent(
+      id: 'balakot',
+      title: 'ปฏิบัติการ Balakot',
+      year: 2019,
+      location: 'บาลาคอต, ปากีสถาน',
+      lat: 34.3,
+      lon: 73.3,
+      description: 'อินเดียโจมตีข้าม LOC ครั้งแรกในรอบ 50 ปี\n'
+          'ใช้ Mirage 2000 พร้อม ECM หลบเรดาร์\n'
+          'ปากีสถานใช้ F-16 ตอบโต้ การรบอากาศเกิดขึ้น',
+      significance: 'EW ในสงครามข้ามพรมแดน',
+      icon: Icons.flight,
+      color: AppColors.radarColor,
+      era: EWEra.modern,
+    ),
+
+    // ============ ลิเบีย ============
+    EWHistoricalEvent(
+      id: 'libya_drones',
+      title: 'สงครามโดรนลิเบีย',
+      year: 2020,
+      location: 'ตริโปลี, ลิเบีย',
+      lat: 32.9,
+      lon: 13.2,
+      description: 'โดรน TB2 ตุรกีทำลาย Pantsir-S1 รัสเซีย\n'
+          'กองกำลัง Haftar ใช้ EW รัสเซียป้องกัน\n'
+          'การต่อสู้ระหว่างโดรนและระบบ C-UAS',
+      significance: 'โดรน vs ระบบป้องกันภัยทางอากาศ',
+      icon: Icons.airplanemode_active,
+      color: AppColors.droneColor,
+      era: EWEra.modern,
+    ),
+
+    // ============ เมียนมาร์ ============
+    EWHistoricalEvent(
+      id: 'myanmar_ew',
+      title: 'เมียนมาร์: EW ปิดกั้นสื่อสาร',
+      year: 2021,
+      location: 'เมียนมาร์',
+      lat: 19.75,
+      lon: 96.08,
+      description: 'กองทัพใช้ EW ตัดสัญญาณอินเทอร์เน็ต\n'
+          'รบกวนสัญญาณโทรศัพท์มือถือ\n'
+          'ใช้ SIGINT ติดตามผู้ประท้วง',
+      significance: 'EW ในการควบคุมประชากร',
+      icon: Icons.signal_cellular_off,
+      color: AppColors.warning,
+      era: EWEra.modern,
+    ),
   ];
 
   List<EWHistoricalEvent> get _events {

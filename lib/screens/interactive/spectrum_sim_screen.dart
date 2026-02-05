@@ -675,114 +675,163 @@ class _SpectrumSimScreenState extends State<SpectrumSimScreen>
   }
 
   Widget _buildFrequencyControls() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0a0a1a),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.esColor.withValues(alpha: 0.2)),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Section title
           Row(
             children: [
-              const SizedBox(
-                width: 70,
-                child: Text(
-                  'CENTER',
-                  style: TextStyle(
-                    color: Colors.amber,
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    activeTrackColor: Colors.amber,
-                    inactiveTrackColor: Colors.amber.withValues(alpha: 0.2),
-                    thumbColor: Colors.amber,
-                    overlayColor: Colors.amber.withValues(alpha: 0.2),
-                    trackHeight: 4,
-                  ),
-                  child: Slider(
-                    value: _centerFrequency,
-                    min: 50,
-                    max: 350,
-                    divisions: 60,
-                    onChanged: (value) {
-                      setState(() {
-                        _centerFrequency = value;
-                        _initializeWaterfall();
-                      });
-                    },
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 70,
-                child: Text(
-                  '${_centerFrequency.toInt()} MHz',
-                  style: const TextStyle(
-                    color: Colors.amber,
-                    fontSize: 12,
-                    fontFamily: 'monospace',
-                  ),
-                  textAlign: TextAlign.right,
+              Icon(Icons.tune, color: AppColors.esColor, size: 16),
+              const SizedBox(width: 8),
+              Text(
+                'ตั้งค่าความถี่',
+                style: TextStyle(
+                  color: AppColors.esColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-          Row(
-            children: [
-              const SizedBox(
-                width: 70,
-                child: Text(
-                  'SPAN',
-                  style: TextStyle(
-                    color: Colors.purple,
-                    fontSize: 11,
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    activeTrackColor: Colors.purple,
-                    inactiveTrackColor: Colors.purple.withValues(alpha: 0.2),
-                    thumbColor: Colors.purple,
-                    overlayColor: Colors.purple.withValues(alpha: 0.2),
-                    trackHeight: 4,
-                  ),
-                  child: Slider(
-                    value: _span,
-                    min: 20,
-                    max: 200,
-                    divisions: 18,
-                    onChanged: (value) {
-                      setState(() {
-                        _span = value;
-                        _initializeWaterfall();
-                      });
-                    },
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 70,
-                child: Text(
-                  '${_span.toInt()} MHz',
-                  style: const TextStyle(
-                    color: Colors.purple,
-                    fontSize: 12,
-                    fontFamily: 'monospace',
-                  ),
-                  textAlign: TextAlign.right,
-                ),
-              ),
-            ],
+          const SizedBox(height: 12),
+
+          // CENTER frequency control
+          _buildControlRow(
+            label: 'CENTER',
+            thaiLabel: 'ความถี่กลาง',
+            helpText: 'ความถี่ตรงกลางของย่านที่สแกน',
+            value: _centerFrequency,
+            min: 50,
+            max: 350,
+            divisions: 60,
+            color: Colors.amber,
+            unit: 'MHz',
+            onChanged: (value) {
+              setState(() {
+                _centerFrequency = value;
+                _initializeWaterfall();
+              });
+            },
+          ),
+          const SizedBox(height: 8),
+
+          // SPAN control
+          _buildControlRow(
+            label: 'SPAN',
+            thaiLabel: 'ความกว้างย่าน',
+            helpText: 'ขนาดช่วงความถี่ที่แสดง (ยิ่งกว้าง เห็นมากแต่ละเอียดน้อย)',
+            value: _span,
+            min: 20,
+            max: 200,
+            divisions: 18,
+            color: Colors.purple,
+            unit: 'MHz',
+            onChanged: (value) {
+              setState(() {
+                _span = value;
+                _initializeWaterfall();
+              });
+            },
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildControlRow({
+    required String label,
+    required String thaiLabel,
+    required String helpText,
+    required double value,
+    required double min,
+    required double max,
+    required int divisions,
+    required Color color,
+    required String unit,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            SizedBox(
+              width: 70,
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Expanded(
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  activeTrackColor: color,
+                  inactiveTrackColor: color.withValues(alpha: 0.2),
+                  thumbColor: color,
+                  overlayColor: color.withValues(alpha: 0.2),
+                  trackHeight: 4,
+                ),
+                child: Slider(
+                  value: value,
+                  min: min,
+                  max: max,
+                  divisions: divisions,
+                  onChanged: onChanged,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 70,
+              child: Text(
+                '${value.toInt()} $unit',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                ),
+                textAlign: TextAlign.right,
+              ),
+            ),
+          ],
+        ),
+        // Thai help text
+        Container(
+          margin: const EdgeInsets.only(left: 4, top: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: color.withValues(alpha: 0.6), size: 12),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  '$thaiLabel: $helpText',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

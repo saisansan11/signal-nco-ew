@@ -662,14 +662,27 @@ class _RadarSimScreenState extends State<RadarSimScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'SWEEP: ${_sweepSpeed.toStringAsFixed(1)}s',
-                            style: TextStyle(
-                              color: AppColors.radarColor,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1,
-                            ),
+                          Row(
+                            children: [
+                              Text(
+                                'SWEEP: ${_sweepSpeed.toStringAsFixed(1)}s',
+                                style: TextStyle(
+                                  color: AppColors.radarColor,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                              const Spacer(),
+                              Tooltip(
+                                message: 'ความเร็วกวาด: ยิ่งช้า ตรวจจับแม่นยำขึ้น',
+                                child: Icon(
+                                  Icons.info_outline,
+                                  color: AppColors.radarColor.withAlpha(150),
+                                  size: 14,
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 4),
                           SliderTheme(
@@ -693,6 +706,21 @@ class _RadarSimScreenState extends State<RadarSimScreen>
                                   );
                                 });
                               },
+                            ),
+                          ),
+                          // Thai help text
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.radarColor.withAlpha(20),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'ความเร็วกวาด: ${_sweepSpeed < 2 ? "เร็ว" : _sweepSpeed < 4 ? "ปานกลาง" : "ช้า"} (${_sweepSpeed < 2 ? "อาจพลาดเป้าเล็ก" : _sweepSpeed < 4 ? "สมดุล" : "แม่นยำสูง"})',
+                              style: TextStyle(
+                                color: AppColors.radarColor.withAlpha(180),
+                                fontSize: 9,
+                              ),
                             ),
                           ),
                         ],

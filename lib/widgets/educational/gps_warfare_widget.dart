@@ -118,53 +118,106 @@ class _GPSWarfareWidgetState extends State<GPSWarfareWidget>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: _getModeColor().withValues(alpha: 0.3),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWideScreen = constraints.maxWidth > 600;
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _getModeColor().withValues(alpha: 0.3),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _getModeColor().withValues(alpha: 0.1),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: isWideScreen ? _buildWideLayout() : _buildCompactLayout(),
+        ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.1);
+      },
+    );
+  }
+
+  /// Wide screen layout - side by side
+  Widget _buildWideLayout() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Left: Visualization
+        Expanded(
+          flex: 5,
+          child: Column(
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 12),
+              AspectRatio(
+                aspectRatio: 1.2,
+                child: _buildGPSVisualization(),
+              ),
+              const SizedBox(height: 12),
+              _buildStatusDisplay(),
+            ],
+          ),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: _getModeColor().withValues(alpha: 0.1),
-            blurRadius: 20,
-            spreadRadius: 5,
+        const SizedBox(width: 16),
+        // Right: Controls
+        Expanded(
+          flex: 4,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildModeSelector(),
+              const SizedBox(height: 12),
+              if (_currentMode == GPSMode.jamming) _buildJammingControls(),
+              if (_currentMode == GPSMode.spoofing) _buildSpoofingControls(),
+              const SizedBox(height: 12),
+              _buildAntiJamToggle(),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Header
-          _buildHeader(),
-          const SizedBox(height: 16),
+        ),
+      ],
+    );
+  }
 
-          // GPS Visualization
-          AspectRatio(
-            aspectRatio: 1.2,
-            child: _buildGPSVisualization(),
-          ),
-          const SizedBox(height: 16),
+  /// Compact mobile layout
+  Widget _buildCompactLayout() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Header
+        _buildHeader(),
+        const SizedBox(height: 12),
 
-          // Mode Selector
-          _buildModeSelector(),
-          const SizedBox(height: 12),
+        // GPS Visualization - more compact
+        AspectRatio(
+          aspectRatio: 1.6, // Wider = shorter height
+          child: _buildGPSVisualization(),
+        ),
+        const SizedBox(height: 12),
 
-          // Controls based on mode
-          if (_currentMode == GPSMode.jamming) _buildJammingControls(),
-          if (_currentMode == GPSMode.spoofing) _buildSpoofingControls(),
+        // Mode Selector
+        _buildModeSelector(),
+        const SizedBox(height: 10),
 
-          // Anti-Jam Toggle
-          const SizedBox(height: 12),
-          _buildAntiJamToggle(),
+        // Controls based on mode
+        if (_currentMode == GPSMode.jamming) _buildJammingControls(),
+        if (_currentMode == GPSMode.spoofing) _buildSpoofingControls(),
 
-          // Status Display
-          const SizedBox(height: 12),
-          _buildStatusDisplay(),
-        ],
-      ),
-    ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.1);
+        // Anti-Jam Toggle
+        const SizedBox(height: 10),
+        _buildAntiJamToggle(),
+
+        // Status Display
+        const SizedBox(height: 10),
+        _buildStatusDisplay(),
+      ],
+    );
   }
 
   Color _getModeColor() {

@@ -67,6 +67,25 @@ class _TutorialOverlayState extends State<TutorialOverlay>
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(TutorialOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Re-check when parent widget rebuilds (e.g., when help button is pressed)
+    _recheckTutorial();
+  }
+
+  Future<void> _recheckTutorial() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasSeenTutorial = prefs.getBool('tutorial_${widget.tutorialKey}') ?? false;
+
+    if (!hasSeenTutorial && !_showTutorial) {
+      setState(() {
+        _showTutorial = true;
+        _currentStep = 0;
+      });
+    }
+  }
+
   Future<void> _checkFirstLaunch() async {
     final prefs = await SharedPreferences.getInstance();
     final hasSeenTutorial = prefs.getBool('tutorial_${widget.tutorialKey}') ?? false;

@@ -1184,88 +1184,172 @@ class _SimulationItem {
   });
 }
 
-class _SimulationCard extends StatelessWidget {
+class _SimulationCard extends StatefulWidget {
   final _SimulationItem item;
 
   const _SimulationCard({required this.item});
 
   @override
+  State<_SimulationCard> createState() => _SimulationCardState();
+}
+
+class _SimulationCardState extends State<_SimulationCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSizes.paddingM),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => item.screen),
-          ),
-          borderRadius: BorderRadius.circular(AppSizes.radiusL),
-          child: Container(
-            padding: const EdgeInsets.all(AppSizes.paddingL),
+      child: AnimatedBuilder(
+        animation: _pulseController,
+        builder: (context, child) {
+          return Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  item.color.withAlpha(30),
-                  AppColors.card,
-                ],
-              ),
               borderRadius: BorderRadius.circular(AppSizes.radiusL),
-              border: Border.all(
-                color: item.color.withAlpha(50),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: item.color.withAlpha(40),
-                    borderRadius: BorderRadius.circular(AppSizes.radiusM),
-                  ),
-                  child: Icon(
-                    item.icon,
-                    color: item.color,
-                    size: 32,
-                  ),
-                ),
-                const SizedBox(width: AppSizes.paddingM),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.title,
-                        style: AppTextStyles.titleLarge.copyWith(
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item.subtitle,
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: item.color,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusM),
-                  ),
-                  child: const Icon(
-                    Icons.play_arrow,
-                    color: Colors.white,
-                  ),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.item.color.withValues(alpha: 0.15 + (_pulseController.value * 0.1)),
+                  blurRadius: 12 + (_pulseController.value * 8),
+                  spreadRadius: 1,
                 ),
               ],
+            ),
+            child: child,
+          );
+        },
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => Navigator.push(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (context, animation, secondaryAnimation) => widget.item.screen,
+                transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: ScaleTransition(
+                      scale: Tween<double>(begin: 0.95, end: 1.0).animate(
+                        CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                      ),
+                      child: child,
+                    ),
+                  );
+                },
+                transitionDuration: const Duration(milliseconds: 300),
+              ),
+            ),
+            borderRadius: BorderRadius.circular(AppSizes.radiusL),
+            child: Container(
+              padding: const EdgeInsets.all(AppSizes.paddingL),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    widget.item.color.withAlpha(30),
+                    AppColors.card,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(AppSizes.radiusL),
+                border: Border.all(
+                  color: widget.item.color.withAlpha(50),
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Icon with glow effect
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: widget.item.color.withAlpha(40),
+                      borderRadius: BorderRadius.circular(AppSizes.radiusM),
+                      boxShadow: [
+                        BoxShadow(
+                          color: widget.item.color.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      widget.item.icon,
+                      color: widget.item.color,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(width: AppSizes.paddingM),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.item.title,
+                          style: AppTextStyles.titleLarge.copyWith(
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.item.subtitle,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Play button with animated glow
+                  AnimatedBuilder(
+                    animation: _pulseController,
+                    builder: (context, child) {
+                      return Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              widget.item.color,
+                              widget.item.color.withValues(alpha: 0.8),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(AppSizes.radiusM),
+                          boxShadow: [
+                            BoxShadow(
+                              color: widget.item.color.withValues(alpha: 0.4 + (_pulseController.value * 0.2)),
+                              blurRadius: 8 + (_pulseController.value * 4),
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.play_arrow,
+                          color: Colors.white,
+                          size: 26,
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         ),

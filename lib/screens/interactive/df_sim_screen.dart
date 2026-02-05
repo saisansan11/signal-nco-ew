@@ -578,67 +578,130 @@ class _DFSimScreenState extends State<DFSimScreen>
       color: AppColors.surface,
       child: Column(
         children: [
+          // Thai help text explanation
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: AppColors.warning.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.lightbulb_outline, color: AppColors.warning, size: 18),
+                    const SizedBox(width: 6),
+                    Text(
+                      'วิธีเล่น: หาตำแหน่งเป้าหมายด้วยการตัดมุม',
+                      style: AppTextStyles.labelLarge.copyWith(
+                        color: AppColors.warning,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '1. หมุนหน้าปัดแต่ละสถานี (Alpha, Bravo, Charlie) ให้เส้นชี้ไปทิศทางที่คิดว่าเป้าหมายอยู่\n'
+                  '2. จุดตัดของเส้น 3 เส้นคือตำแหน่งโดยประมาณ\n'
+                  '3. แตะบนแผนที่เพื่อเลือกตำแหน่งที่คุณคิดว่าถูกต้อง',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: Text(
-                  'หมุนปรับทิศทางแต่ละสถานี',
+                  'หมุนปรับทิศทางแต่ละสถานี (ลากนิ้วบนหน้าปัด)',
                   style: AppTextStyles.titleSmall.copyWith(
                     color: AppColors.textPrimary,
                   ),
                 ),
               ),
-              // GDOP indicator
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _gdop < 2
-                      ? Colors.green.withValues(alpha: 0.2)
-                      : _gdop < 4
-                          ? Colors.orange.withValues(alpha: 0.2)
-                          : Colors.red.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
+              // GDOP indicator with Thai explanation
+              Tooltip(
+                message: 'ค่าความแม่นยำทางเรขาคณิต\nยิ่งน้อยยิ่งดี',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
                     color: _gdop < 2
-                        ? Colors.green
+                        ? Colors.green.withValues(alpha: 0.2)
                         : _gdop < 4
-                            ? Colors.orange
-                            : Colors.red,
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _gdop < 2
-                          ? Icons.check_circle
-                          : _gdop < 4
-                              ? Icons.warning
-                              : Icons.error,
-                      size: 14,
+                            ? Colors.orange.withValues(alpha: 0.2)
+                            : Colors.red.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
                       color: _gdop < 2
                           ? Colors.green
                           : _gdop < 4
                               ? Colors.orange
                               : Colors.red,
+                      width: 1,
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'GDOP: ${_gdop.toStringAsFixed(1)}',
-                      style: TextStyle(
-                        color: _gdop < 2
-                            ? Colors.green
-                            : _gdop < 4
-                                ? Colors.orange
-                                : Colors.red,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'monospace',
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _gdop < 2
+                                ? Icons.check_circle
+                                : _gdop < 4
+                                    ? Icons.warning
+                                    : Icons.error,
+                            size: 14,
+                            color: _gdop < 2
+                                ? Colors.green
+                                : _gdop < 4
+                                    ? Colors.orange
+                                    : Colors.red,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'GDOP: ${_gdop.toStringAsFixed(1)}',
+                            style: TextStyle(
+                              color: _gdop < 2
+                                  ? Colors.green
+                                  : _gdop < 4
+                                      ? Colors.orange
+                                      : Colors.red,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                      Text(
+                        _gdop < 2
+                            ? 'แม่นยำดี'
+                            : _gdop < 4
+                                ? 'พอใช้ได้'
+                                : 'ต้องปรับมุม',
+                        style: TextStyle(
+                          color: _gdop < 2
+                              ? Colors.green
+                              : _gdop < 4
+                                  ? Colors.orange
+                                  : Colors.red,
+                          fontSize: 9,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -680,6 +743,55 @@ class _DFSimScreenState extends State<DFSimScreen>
       ),
       child: Column(
         children: [
+          // Thai instruction text
+          if (!_showResult && _estimatedPosition == null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.cyan.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.cyan.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.touch_app, color: Colors.cyan, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'แตะบนแผนที่เพื่อเลือกตำแหน่งที่คิดว่าเป้าหมายอยู่',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.cyan,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (!_showResult && _estimatedPosition != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle_outline, color: Colors.orange, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'เลือกตำแหน่งแล้ว! กด "ยืนยันตำแหน่ง" เพื่อดูผล หรือแตะใหม่เพื่อเปลี่ยน',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           if (_showResult) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.center,

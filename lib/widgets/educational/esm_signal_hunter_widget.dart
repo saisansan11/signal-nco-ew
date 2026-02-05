@@ -126,44 +126,94 @@ class _ESMSignalHunterWidgetState extends State<ESMSignalHunterWidget>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.esColor.withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.esColor.withValues(alpha: 0.1),
-            blurRadius: 20,
-            spreadRadius: 5,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isWideScreen = constraints.maxWidth > 600;
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.esColor.withValues(alpha: 0.3)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.esColor.withValues(alpha: 0.1),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Header
-          _buildHeader(),
-          const SizedBox(height: 16),
+          child: isWideScreen ? _buildWideLayout() : _buildCompactLayout(),
+        ).animate().fadeIn(duration: 500.ms).scale(
+              begin: const Offset(0.95, 0.95),
+              curve: Curves.easeOutBack,
+            );
+      },
+    );
+  }
 
-          // Radar Display
-          AspectRatio(
-            aspectRatio: 1,
-            child: _buildRadarDisplay(),
+  /// Wide screen layout
+  Widget _buildWideLayout() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Left: Radar
+        Expanded(
+          flex: 5,
+          child: Column(
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 12),
+              AspectRatio(
+                aspectRatio: 1,
+                child: _buildRadarDisplay(),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+        ),
+        const SizedBox(width: 16),
+        // Right: Controls & Signal List
+        Expanded(
+          flex: 4,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!_isScanning) _buildStartButton(),
+              if (_foundSignals.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _buildSignalList(),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
-          // Signal List
-          if (_foundSignals.isNotEmpty) _buildSignalList(),
+  /// Compact mobile layout
+  Widget _buildCompactLayout() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Header
+        _buildHeader(),
+        const SizedBox(height: 12),
 
-          // Start Button
-          if (!_isScanning) _buildStartButton(),
-        ],
-      ),
-    ).animate().fadeIn(duration: 500.ms).scale(
-          begin: const Offset(0.95, 0.95),
-          curve: Curves.easeOutBack,
-        );
+        // Radar Display - more compact
+        AspectRatio(
+          aspectRatio: 1.3,
+          child: _buildRadarDisplay(),
+        ),
+        const SizedBox(height: 12),
+
+        // Signal List
+        if (_foundSignals.isNotEmpty) _buildSignalList(),
+
+        // Start Button
+        if (!_isScanning) _buildStartButton(),
+      ],
+    );
   }
 
   Widget _buildHeader() {

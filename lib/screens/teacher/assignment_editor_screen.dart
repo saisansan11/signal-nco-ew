@@ -341,7 +341,7 @@ class _AssignmentEditorScreenState extends State<AssignmentEditorScreen> {
         return CurriculumData.allModules.map((module) {
           return {
             'id': module.id,
-            'title': 'บทที่ ${module.moduleNumber}',
+            'title': 'บทที่ ${module.moduleNumber + 1}',
             'titleTh': module.titleTh,
             'icon': Icons.menu_book,
           };
@@ -353,7 +353,7 @@ class _AssignmentEditorScreenState extends State<AssignmentEditorScreen> {
         for (final module in CurriculumData.allModules) {
           quizzes.add({
             'id': 'quiz_${module.id}',
-            'title': 'Quiz บทที่ ${module.moduleNumber}',
+            'title': 'Quiz บทที่ ${module.moduleNumber + 1}',
             'titleTh': 'แบบทดสอบ ${module.titleTh}',
             'icon': Icons.quiz,
           });

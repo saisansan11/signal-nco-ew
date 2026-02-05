@@ -3,6 +3,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../app/constants.dart';
 import '../../models/campaign_model.dart';
 import '../../services/campaign_service.dart';
+import '../../widgets/effects/celebration_widget.dart';
+import '../interactive/radar_sim_screen.dart';
+import '../interactive/spectrum_sim_screen.dart';
+import '../interactive/jamming_sim_screen.dart';
+import '../interactive/df_sim_screen.dart';
 
 /// Campaign Detail Screen - แสดงรายละเอียด Campaign และ Mission
 class CampaignDetailScreen extends StatefulWidget {
@@ -238,12 +243,192 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
     // Track mission start
     _campaignService.startMission(widget.campaign.id, mission.id);
 
-    // TODO: Navigate to actual simulation based on mission type
-    // For now, show a placeholder
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('เริ่มภารกิจ: ${mission.nameTh}'),
-        backgroundColor: widget.campaign.difficulty.color,
+    // Navigate to actual simulation based on mission type
+    Widget simulationScreen;
+
+    switch (mission.type) {
+      case MissionType.esm:
+        simulationScreen = const SpectrumSimScreen();
+        break;
+      case MissionType.ecm:
+        simulationScreen = const JammingSimScreen();
+        break;
+      case MissionType.eccm:
+        simulationScreen = const JammingSimScreen(); // ECCM mode in jamming sim
+        break;
+      case MissionType.radar:
+        simulationScreen = const RadarSimScreen();
+        break;
+      case MissionType.df:
+        simulationScreen = const DFSimScreen();
+        break;
+      case MissionType.combined:
+        // For combined missions, show a selection dialog
+        _showCombinedMissionDialog(mission);
+        return;
+    }
+
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => simulationScreen,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.1),
+                end: Offset.zero,
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOut,
+              )),
+              child: child,
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 400),
+      ),
+    ).then((_) {
+      // When returning from simulation, record completion
+      // For demo purposes, give random stars
+      _recordMissionCompletion(mission);
+    });
+  }
+
+  void _showCombinedMissionDialog(CampaignMission mission) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text(
+          'เลือกโหมดจำลอง',
+          style: AppTextStyles.titleMedium.copyWith(
+            color: AppColors.textPrimary,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildSimulationOption(
+              icon: Icons.radar,
+              title: 'เรดาร์',
+              color: AppColors.radarColor,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => const RadarSimScreen(),
+                ));
+              },
+            ),
+            const SizedBox(height: 8),
+            _buildSimulationOption(
+              icon: Icons.waves,
+              title: 'วิเคราะห์สเปกตรัม',
+              color: AppColors.esColor,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => const SpectrumSimScreen(),
+                ));
+              },
+            ),
+            const SizedBox(height: 8),
+            _buildSimulationOption(
+              icon: Icons.flash_on,
+              title: 'รบกวนสัญญาณ',
+              color: AppColors.eaColor,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => const JammingSimScreen(),
+                ));
+              },
+            ),
+            const SizedBox(height: 8),
+            _buildSimulationOption(
+              icon: Icons.location_searching,
+              title: 'หาทิศทาง',
+              color: AppColors.info,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => const DFSimScreen(),
+                ));
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSimulationOption({
+    required IconData icon,
+    required String title,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: AppTextStyles.titleSmall.copyWith(
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Spacer(),
+            Icon(Icons.arrow_forward_ios, color: color, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _recordMissionCompletion(CampaignMission mission) {
+    // Record completion with random performance for demo
+    final score = 50 + (DateTime.now().millisecond % 51); // 50-100 score
+    final timeSpent = 60 + (DateTime.now().millisecond % 120); // 60-180 seconds
+
+    _campaignService.completeMission(
+      campaignId: widget.campaign.id,
+      missionId: mission.id,
+      score: score,
+      timeSpent: timeSpent,
+      objectiveProgress: {
+        for (var obj in mission.objectives) obj.id: obj.targetValue,
+      },
+    );
+
+    // Refresh UI
+    setState(() {});
+
+    // Calculate stars based on score
+    final stars = score >= 80 ? 3 : (score >= 60 ? 2 : 1);
+
+    // Show celebration dialog with confetti!
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => SuccessCelebrationDialog(
+        title: 'ภารกิจสำเร็จ!',
+        message: mission.nameTh,
+        score: score,
+        stars: stars,
+        xpEarned: mission.xpReward,
       ),
     );
   }

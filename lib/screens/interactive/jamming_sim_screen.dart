@@ -773,6 +773,8 @@ class _JammingSimScreenState extends State<JammingSimScreen>
         children: [
           _EnhancedSlider(
             label: 'POWER',
+            thaiLabel: 'กำลังส่ง (Power)',
+            helpText: 'ยิ่งสูง ยิ่งรบกวนได้ผลดี แต่ใช้พลังงานมาก',
             value: _jammingPower,
             min: 0,
             max: 100,
@@ -785,6 +787,8 @@ class _JammingSimScreenState extends State<JammingSimScreen>
           ),
           _EnhancedSlider(
             label: 'FREQ',
+            thaiLabel: 'ความถี่เป้าหมาย (Frequency)',
+            helpText: 'ปรับให้ตรงกับความถี่ของสัญญาณที่ต้องการรบกวน',
             value: _targetFrequency,
             min: 100,
             max: 200,
@@ -798,6 +802,8 @@ class _JammingSimScreenState extends State<JammingSimScreen>
           if (_jammingType != JammingType.spot)
             _EnhancedSlider(
               label: 'BW',
+              thaiLabel: 'แบนด์วิดท์ (Bandwidth)',
+              helpText: 'ความกว้างของย่านความถี่ที่รบกวน ยิ่งกว้าง ครอบคลุมมาก แต่ประสิทธิภาพต่ำ',
               value: _jammingBandwidth,
               min: 5,
               max: 50,
@@ -959,6 +965,8 @@ class _JammingSimScreenState extends State<JammingSimScreen>
 
 class _EnhancedSlider extends StatelessWidget {
   final String label;
+  final String? thaiLabel;
+  final String? helpText;
   final double value;
   final double min;
   final double max;
@@ -968,6 +976,8 @@ class _EnhancedSlider extends StatelessWidget {
 
   const _EnhancedSlider({
     required this.label,
+    this.thaiLabel,
+    this.helpText,
     required this.value,
     required this.min,
     required this.max,
@@ -978,53 +988,100 @@ class _EnhancedSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 50,
-            child: Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 10,
-                fontFamily: 'monospace',
-                fontWeight: FontWeight.bold,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 50,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 10,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
+              Expanded(
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: color,
+                    inactiveTrackColor: color.withValues(alpha: 0.2),
+                    thumbColor: color,
+                    overlayColor: color.withValues(alpha: 0.2),
+                    trackHeight: 4,
+                  ),
+                  child: Slider(
+                    value: value,
+                    min: min,
+                    max: max,
+                    onChanged: onChanged,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 70,
+                child: Text(
+                  '${value.toInt()} $unit',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                  ),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Thai label and help text
+        if (thaiLabel != null || helpText != null)
+          Container(
+            margin: const EdgeInsets.only(left: 4, bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: color.withValues(alpha: 0.15)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: color.withValues(alpha: 0.6), size: 14),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (thaiLabel != null)
+                        Text(
+                          thaiLabel!,
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      if (helpText != null)
+                        Text(
+                          helpText!,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.6),
+                            fontSize: 10,
+                            height: 1.3,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          Expanded(
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                activeTrackColor: color,
-                inactiveTrackColor: color.withValues(alpha: 0.2),
-                thumbColor: color,
-                overlayColor: color.withValues(alpha: 0.2),
-                trackHeight: 4,
-              ),
-              child: Slider(
-                value: value,
-                min: min,
-                max: max,
-                onChanged: onChanged,
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 70,
-            child: Text(
-              '${value.toInt()} $unit',
-              style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontFamily: 'monospace',
-              ),
-              textAlign: TextAlign.right,
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }
