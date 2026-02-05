@@ -4,7 +4,7 @@ import 'dart:math' as math;
 import '../../app/constants.dart';
 
 /// EW Mission Planner Widget - ฝึกวางแผนภารกิจ EW จริง
-/// รวม ES, EA, EP concepts เข้าด้วยกัน
+/// รวม ESM, ECM, ECCM concepts เข้าด้วยกัน
 /// เรียนรู้การตัดสินใจในสถานการณ์จำลอง
 class EWMissionPlannerWidget extends StatefulWidget {
   final VoidCallback? onComplete;
@@ -30,9 +30,9 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
   final List<EnemyEmitter> _enemyEmitters = [];
 
   // Player decisions
-  final Map<String, bool> _esDecisions = {};
-  final Map<String, bool> _eaDecisions = {};
-  final Map<String, bool> _epDecisions = {};
+  final Map<String, bool> _esmDecisions = {};
+  final Map<String, bool> _ecmDecisions = {};
+  final Map<String, bool> _eccmDecisions = {};
 
   // Scenario
   late MissionScenario _currentScenario;
@@ -92,9 +92,9 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
           isActive: true,
         ),
       ],
-      correctESDecisions: {'detect_radar_1': true, 'detect_radar_2': true, 'df_radar_1': true},
-      correctEADecisions: {'jam_radar_1': false, 'jam_radar_2': false},
-      correctEPDecisions: {'radio_silence': true, 'use_secure_comms': true, 'avoid_radar_zone': true},
+      correctESMDecisions: {'detect_radar_1': true, 'detect_radar_2': true, 'df_radar_1': true},
+      correctECMDecisions: {'jam_radar_1': false, 'jam_radar_2': false},
+      correctECCMDecisions: {'radio_silence': true, 'use_secure_comms': true, 'avoid_radar_zone': true},
     ),
     MissionScenario(
       id: 'scenario_2',
@@ -160,9 +160,9 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
           isActive: true,
         ),
       ],
-      correctESDecisions: {'detect_sam_radar': true, 'detect_aaa_radar': true, 'detect_enemy_comms': true},
-      correctEADecisions: {'jam_sam_radar': true, 'jam_aaa_radar': true, 'jam_enemy_comms': false},
-      correctEPDecisions: {'use_eccm': true, 'coordinate_timing': true},
+      correctESMDecisions: {'detect_sam_radar': true, 'detect_aaa_radar': true, 'detect_enemy_comms': true},
+      correctECMDecisions: {'jam_sam_radar': true, 'jam_aaa_radar': true, 'jam_enemy_comms': false},
+      correctECCMDecisions: {'use_eccm': true, 'coordinate_timing': true},
     ),
   ];
 
@@ -191,9 +191,9 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
       _friendlyAssets.addAll(_currentScenario.friendlyAssets);
       _enemyEmitters.clear();
       _enemyEmitters.addAll(_currentScenario.enemyEmitters);
-      _esDecisions.clear();
-      _eaDecisions.clear();
-      _epDecisions.clear();
+      _esmDecisions.clear();
+      _ecmDecisions.clear();
+      _eccmDecisions.clear();
       _currentPhase = MissionPhase.planning;
     });
   }
@@ -202,26 +202,26 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
     int score = 0;
     int maxScore = 0;
 
-    // Evaluate ES decisions
-    for (var entry in _currentScenario.correctESDecisions.entries) {
+    // Evaluate ESM decisions
+    for (var entry in _currentScenario.correctESMDecisions.entries) {
       maxScore += 10;
-      if (_esDecisions[entry.key] == entry.value) {
+      if (_esmDecisions[entry.key] == entry.value) {
         score += 10;
       }
     }
 
-    // Evaluate EA decisions
-    for (var entry in _currentScenario.correctEADecisions.entries) {
+    // Evaluate ECM decisions
+    for (var entry in _currentScenario.correctECMDecisions.entries) {
       maxScore += 15;
-      if (_eaDecisions[entry.key] == entry.value) {
+      if (_ecmDecisions[entry.key] == entry.value) {
         score += 15;
       }
     }
 
-    // Evaluate EP decisions
-    for (var entry in _currentScenario.correctEPDecisions.entries) {
+    // Evaluate ECCM decisions
+    for (var entry in _currentScenario.correctECCMDecisions.entries) {
       maxScore += 10;
-      if (_epDecisions[entry.key] == entry.value) {
+      if (_eccmDecisions[entry.key] == entry.value) {
         score += 10;
       }
     }
@@ -410,12 +410,12 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
     switch (_currentPhase) {
       case MissionPhase.planning:
         return _buildPlanningPhase();
-      case MissionPhase.es:
-        return _buildESPhase();
-      case MissionPhase.ea:
-        return _buildEAPhase();
-      case MissionPhase.ep:
-        return _buildEPPhase();
+      case MissionPhase.esm:
+        return _buildESMPhase();
+      case MissionPhase.ecm:
+        return _buildECMPhase();
+      case MissionPhase.eccm:
+        return _buildECCMPhase();
       case MissionPhase.execution:
         return _buildExecutionPhase();
       case MissionPhase.debrief:
@@ -588,7 +588,7 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
     );
   }
 
-  Widget _buildESPhase() {
+  Widget _buildESMPhase() {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -608,7 +608,7 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
                     const Icon(Icons.search, color: AppColors.esColor, size: 18),
                     const SizedBox(width: 8),
                     Text(
-                      'Electronic Support (ES)',
+                      'Electronic Support Measures (ESM)',
                       style: AppTextStyles.titleSmall.copyWith(
                         color: AppColors.esColor,
                       ),
@@ -617,7 +617,7 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'เลือกมาตรการ ES ที่จะใช้:',
+                  'เลือกมาตรการ ESM ที่จะใช้:',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -627,14 +627,14 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
           ),
           const SizedBox(height: 12),
 
-          // ES options for each emitter
-          ..._enemyEmitters.map((emitter) => _buildESOption(emitter)),
+          // ESM options for each emitter
+          ..._enemyEmitters.map((emitter) => _buildESMOption(emitter)),
         ],
       ),
     );
   }
 
-  Widget _buildESOption(EnemyEmitter emitter) {
+  Widget _buildESMOption(EnemyEmitter emitter) {
     final detectKey = 'detect_${emitter.id}';
     final dfKey = 'df_${emitter.id}';
 
@@ -673,8 +673,8 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
               Expanded(
                 child: _buildDecisionChip(
                   'ตรวจจับสัญญาณ',
-                  _esDecisions[detectKey] ?? false,
-                  (value) => setState(() => _esDecisions[detectKey] = value),
+                  _esmDecisions[detectKey] ?? false,
+                  (value) => setState(() => _esmDecisions[detectKey] = value),
                   AppColors.esColor,
                 ),
               ),
@@ -682,8 +682,8 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
               Expanded(
                 child: _buildDecisionChip(
                   'หาทิศทาง (DF)',
-                  _esDecisions[dfKey] ?? false,
-                  (value) => setState(() => _esDecisions[dfKey] = value),
+                  _esmDecisions[dfKey] ?? false,
+                  (value) => setState(() => _esmDecisions[dfKey] = value),
                   AppColors.esColor,
                 ),
               ),
@@ -694,7 +694,7 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
     );
   }
 
-  Widget _buildEAPhase() {
+  Widget _buildECMPhase() {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -714,7 +714,7 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
                     const Icon(Icons.flash_on, color: AppColors.eaColor, size: 18),
                     const SizedBox(width: 8),
                     Text(
-                      'Electronic Attack (EA)',
+                      'Electronic Counter Measures (ECM)',
                       style: AppTextStyles.titleSmall.copyWith(
                         color: AppColors.eaColor,
                       ),
@@ -740,14 +740,14 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
           ),
           const SizedBox(height: 12),
 
-          // EA options
-          ..._enemyEmitters.map((emitter) => _buildEAOption(emitter)),
+          // ECM options
+          ..._enemyEmitters.map((emitter) => _buildECMOption(emitter)),
         ],
       ),
     );
   }
 
-  Widget _buildEAOption(EnemyEmitter emitter) {
+  Widget _buildECMOption(EnemyEmitter emitter) {
     final jamKey = 'jam_${emitter.id}';
 
     return Container(
@@ -757,7 +757,7 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
         color: AppColors.card,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: _eaDecisions[jamKey] == true
+          color: _ecmDecisions[jamKey] == true
               ? AppColors.eaColor.withValues(alpha: 0.5)
               : AppColors.border,
         ),
@@ -781,8 +781,8 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
             ),
           ),
           Switch(
-            value: _eaDecisions[jamKey] ?? false,
-            onChanged: (value) => setState(() => _eaDecisions[jamKey] = value),
+            value: _ecmDecisions[jamKey] ?? false,
+            onChanged: (value) => setState(() => _ecmDecisions[jamKey] = value),
             activeColor: AppColors.eaColor,
           ),
         ],
@@ -790,7 +790,7 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
     );
   }
 
-  Widget _buildEPPhase() {
+  Widget _buildECCMPhase() {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -810,7 +810,7 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
                     const Icon(Icons.shield, color: AppColors.epColor, size: 18),
                     const SizedBox(width: 8),
                     Text(
-                      'Electronic Protection (EP)',
+                      'Electronic Counter-Counter Measures (ECCM)',
                       style: AppTextStyles.titleSmall.copyWith(
                         color: AppColors.epColor,
                       ),
@@ -819,7 +819,7 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'เลือกมาตรการป้องกัน:',
+                  'เลือกมาตรการป้องกัน ECCM:',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -829,22 +829,22 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
           ),
           const SizedBox(height: 12),
 
-          // EP options based on scenario
-          _buildEPOptionCard('radio_silence', 'งดใช้วิทยุ', 'ลดโอกาสถูกตรวจจับด้วย DF', Icons.volume_off),
-          _buildEPOptionCard('use_secure_comms', 'ใช้การสื่อสารปลอดภัย', 'COMSEC + TRANSEC', Icons.lock),
-          _buildEPOptionCard('use_eccm', 'ใช้มาตรการ ECCM', 'FHSS, Spread Spectrum', Icons.security),
-          _buildEPOptionCard('avoid_radar_zone', 'หลีกเลี่ยงพื้นที่เรดาร์', 'เลือกเส้นทางรอบนอก', Icons.alt_route),
-          _buildEPOptionCard('coordinate_timing', 'ประสานเวลา', 'รบกวนพร้อมกับการโจมตี', Icons.timer),
+          // ECCM options based on scenario
+          _buildECCMOptionCard('radio_silence', 'งดใช้วิทยุ', 'ลดโอกาสถูกตรวจจับด้วย DF', Icons.volume_off),
+          _buildECCMOptionCard('use_secure_comms', 'ใช้การสื่อสารปลอดภัย', 'COMSEC + TRANSEC', Icons.lock),
+          _buildECCMOptionCard('use_eccm', 'ใช้มาตรการ ECCM', 'FHSS, Spread Spectrum', Icons.security),
+          _buildECCMOptionCard('avoid_radar_zone', 'หลีกเลี่ยงพื้นที่เรดาร์', 'เลือกเส้นทางรอบนอก', Icons.alt_route),
+          _buildECCMOptionCard('coordinate_timing', 'ประสานเวลา', 'รบกวนพร้อมกับการโจมตี', Icons.timer),
         ],
       ),
     );
   }
 
-  Widget _buildEPOptionCard(String key, String title, String description, IconData icon) {
-    final isSelected = _epDecisions[key] ?? false;
+  Widget _buildECCMOptionCard(String key, String title, String description, IconData icon) {
+    final isSelected = _eccmDecisions[key] ?? false;
 
     return GestureDetector(
-      onTap: () => setState(() => _epDecisions[key] = !isSelected),
+      onTap: () => setState(() => _eccmDecisions[key] = !isSelected),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
@@ -969,9 +969,9 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
           const SizedBox(height: 16),
 
           // Decision review
-          _buildDecisionReview('ES Decisions', _esDecisions, _currentScenario.correctESDecisions, AppColors.esColor),
-          _buildDecisionReview('EA Decisions', _eaDecisions, _currentScenario.correctEADecisions, AppColors.eaColor),
-          _buildDecisionReview('EP Decisions', _epDecisions, _currentScenario.correctEPDecisions, AppColors.epColor),
+          _buildDecisionReview('ESM Decisions', _esmDecisions, _currentScenario.correctESMDecisions, AppColors.esColor),
+          _buildDecisionReview('ECM Decisions', _ecmDecisions, _currentScenario.correctECMDecisions, AppColors.eaColor),
+          _buildDecisionReview('ECCM Decisions', _eccmDecisions, _currentScenario.correctECCMDecisions, AppColors.epColor),
 
           // Try again button
           const SizedBox(height: 16),
@@ -1116,14 +1116,14 @@ class _EWMissionPlannerWidgetState extends State<EWMissionPlannerWidget>
               }
             },
             icon: Icon(
-              _currentPhase == MissionPhase.ep
+              _currentPhase == MissionPhase.eccm
                   ? Icons.rocket_launch
                   : _currentPhase == MissionPhase.execution
                       ? Icons.assessment
                       : Icons.arrow_forward,
             ),
             label: Text(
-              _currentPhase == MissionPhase.ep
+              _currentPhase == MissionPhase.eccm
                   ? 'ปฏิบัติภารกิจ'
                   : _currentPhase == MissionPhase.execution
                       ? 'ดูผลลัพธ์'
@@ -1349,9 +1349,9 @@ class _TacticalMapPainter extends CustomPainter {
 
 enum MissionPhase {
   planning,
-  es,
-  ea,
-  ep,
+  esm,
+  ecm,
+  eccm,
   execution,
   debrief;
 
@@ -1359,12 +1359,12 @@ enum MissionPhase {
     switch (this) {
       case MissionPhase.planning:
         return 'วางแผน';
-      case MissionPhase.es:
-        return 'ES';
-      case MissionPhase.ea:
-        return 'EA';
-      case MissionPhase.ep:
-        return 'EP';
+      case MissionPhase.esm:
+        return 'ESM';
+      case MissionPhase.ecm:
+        return 'ECM';
+      case MissionPhase.eccm:
+        return 'ECCM';
       case MissionPhase.execution:
         return 'ปฏิบัติ';
       case MissionPhase.debrief:
@@ -1376,11 +1376,11 @@ enum MissionPhase {
     switch (this) {
       case MissionPhase.planning:
         return AppColors.info;
-      case MissionPhase.es:
+      case MissionPhase.esm:
         return AppColors.esColor;
-      case MissionPhase.ea:
+      case MissionPhase.ecm:
         return AppColors.eaColor;
-      case MissionPhase.ep:
+      case MissionPhase.eccm:
         return AppColors.epColor;
       case MissionPhase.execution:
         return AppColors.warning;
@@ -1397,9 +1397,9 @@ class MissionScenario {
   final String briefing;
   final List<FriendlyAsset> friendlyAssets;
   final List<EnemyEmitter> enemyEmitters;
-  final Map<String, bool> correctESDecisions;
-  final Map<String, bool> correctEADecisions;
-  final Map<String, bool> correctEPDecisions;
+  final Map<String, bool> correctESMDecisions;
+  final Map<String, bool> correctECMDecisions;
+  final Map<String, bool> correctECCMDecisions;
 
   MissionScenario({
     required this.id,
@@ -1408,9 +1408,9 @@ class MissionScenario {
     required this.briefing,
     required this.friendlyAssets,
     required this.enemyEmitters,
-    required this.correctESDecisions,
-    required this.correctEADecisions,
-    required this.correctEPDecisions,
+    required this.correctESMDecisions,
+    required this.correctECMDecisions,
+    required this.correctECCMDecisions,
   });
 }
 

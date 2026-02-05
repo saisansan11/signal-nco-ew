@@ -9,7 +9,7 @@ class GlossaryData {
       fullForm: 'Electronic Warfare',
       definitionTh: 'สงครามอิเล็กทรอนิกส์ - การปฏิบัติการทางทหารที่เกี่ยวข้องกับการใช้พลังงานแม่เหล็กไฟฟ้าเพื่อควบคุมสเปกตรัมแม่เหล็กไฟฟ้าหรือโจมตีข้าศึก',
       category: EWCategory.overview,
-      relatedTerms: ['ES', 'EA', 'EP'],
+      relatedTerms: ['ESM', 'ECM', 'ECCM'],
     ),
     GlossaryTerm(
       term: 'EMS',

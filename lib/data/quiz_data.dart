@@ -11,7 +11,7 @@ class QuizData {
       questionTh: 'สงครามอิเล็กทรอนิกส์ (EW) ประกอบด้วยกี่เสาหลัก?',
       optionsTh: ['2 เสาหลัก', '3 เสาหลัก', '4 เสาหลัก', '5 เสาหลัก'],
       correctIndex: 1,
-      explanationTh: 'EW ประกอบด้วย 3 เสาหลัก: ES (Electronic Support), EA (Electronic Attack), และ EP (Electronic Protection)',
+      explanationTh: 'EW ประกอบด้วย 3 เสาหลัก: ESM (Electronic Support Measures), ECM (Electronic Counter Measures), และ ECCM (Electronic Counter-Counter Measures)',
       category: EWCategory.overview,
       difficulty: DifficultyLevel.beginner,
     ),
@@ -97,7 +97,7 @@ class QuizData {
       difficulty: DifficultyLevel.beginner,
     ),
 
-    // ================== ES ==================
+    // ================== ESM ==================
     QuizQuestion(
       id: 'es_001',
       questionTh: 'ESM ย่อมาจากอะไร?',
@@ -155,7 +155,7 @@ class QuizData {
       difficulty: DifficultyLevel.intermediate,
     ),
 
-    // ================== EA ==================
+    // ================== ECM ==================
     QuizQuestion(
       id: 'ea_001',
       questionTh: 'Spot Jamming คืออะไร?',
@@ -213,7 +213,7 @@ class QuizData {
       difficulty: DifficultyLevel.intermediate,
     ),
 
-    // ================== EP ==================
+    // ================== ECCM ==================
     QuizQuestion(
       id: 'ep_001',
       questionTh: 'FHSS ย่อมาจากอะไร?',

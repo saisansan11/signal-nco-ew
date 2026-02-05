@@ -79,19 +79,19 @@ class _LessonScreenState extends State<LessonScreen> {
       case 'junior_2_2':
         return _spectrumSimPages();
 
-      // บทที่ 3: ES พื้นฐาน
+      // บทที่ 3: ESM พื้นฐาน
       case 'junior_3_1':
         return _esmBasicsPages();
       case 'junior_3_2':
         return _sigintPages();
 
-      // บทที่ 4: EA พื้นฐาน
+      // บทที่ 4: ECM พื้นฐาน
       case 'junior_4_1':
         return _jammingBasicsPages();
       case 'junior_4_2':
         return _jammingTypesPages();
 
-      // บทที่ 5: EP พื้นฐาน
+      // บทที่ 5: ECCM พื้นฐาน
       case 'junior_5_1':
         return _eccmBasicsPages();
       case 'junior_5_2':
@@ -1840,7 +1840,7 @@ Spectrum Analyzer แสดง:
     ];
   }
 
-  // ==================== บทที่ 3: ES พื้นฐาน ====================
+  // ==================== บทที่ 3: ESM พื้นฐาน ====================
 
   List<LessonPage> _esmBasicsPages() {
     return [
@@ -2525,7 +2525,7 @@ ESM เป็นเครื่องมือในการรวบรวม 
     );
   }
 
-  // ==================== บทที่ 4: EA พื้นฐาน ====================
+  // ==================== บทที่ 4: ECM พื้นฐาน ====================
 
   List<LessonPage> _jammingBasicsPages() {
     return [
@@ -2933,7 +2933,7 @@ J/S Ratio (Jamming-to-Signal)
     );
   }
 
-  // ==================== บทที่ 5: EP พื้นฐาน ====================
+  // ==================== บทที่ 5: ECCM พื้นฐาน ====================
 
   List<LessonPage> _eccmBasicsPages() {
     return [
