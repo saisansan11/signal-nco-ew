@@ -1,307 +1,352 @@
-import 'curriculum_models.dart';
+import ‘dart:convert’;
+import ‘package:flutter/foundation.dart’;
+import ‘package:cloud_firestore/cloud_firestore.dart’;
+import ‘package:firebase_auth/firebase_auth.dart’;
+import ‘../models/curriculum_models.dart’;
+import ‘../models/progress_models.dart’;
+import ‘encrypted_storage_service.dart’;
 
-/// User progress tracking
-class UserProgress {
-  final NCOLevel currentLevel;
-  final Map<String, ModuleProgress> moduleProgress;
-  final int totalXP;
-  final int currentStreak;
-  final DateTime? lastStudyDate;
-  final Set<String> unlockedAchievements;
-  final DailyGoals dailyGoals;
-  final Map<String, SpacedRepetitionCard> flashcardProgress;
+/// Progress tracking service with persistence + Firestore sync
+class ProgressService extends ChangeNotifier {
+static ProgressService? _instance;
+static ProgressService get instance => *instance ??= ProgressService.*();
 
-  UserProgress({
-    this.currentLevel = NCOLevel.junior,
-    Map<String, ModuleProgress>? moduleProgress,
-    this.totalXP = 0,
-    this.currentStreak = 0,
-    this.lastStudyDate,
-    Set<String>? unlockedAchievements,
-    DailyGoals? dailyGoals,
-    Map<String, SpacedRepetitionCard>? flashcardProgress,
-  })  : moduleProgress = moduleProgress ?? {},
-        unlockedAchievements = unlockedAchievements ?? {},
-        dailyGoals = dailyGoals ?? DailyGoals(),
-        flashcardProgress = flashcardProgress ?? {};
+ProgressService._();
 
-  int get level => (totalXP / 100).floor() + 1;
+late EncryptedStorageService _storage;
+UserProgress _progress = UserProgress();
 
-  double get overallProgress {
-    if (moduleProgress.isEmpty) return 0;
-    final completed =
-        moduleProgress.values.where((m) => m.isCompleted).length;
-    return completed / moduleProgress.length;
-  }
+static const String _progressKey = ‘user_progress’;
 
-  bool get isJuniorComplete {
-    // Check if all junior modules are completed
-    return moduleProgress.entries
-        .where((e) => e.key.startsWith('junior_'))
-        .every((e) => e.value.isCompleted);
-  }
+// Firestore reference
+final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  bool get canAccessSenior => isJuniorComplete || currentLevel == NCOLevel.senior;
+UserProgress get progress => _progress;
+NCOLevel get currentLevel => _progress.currentLevel;
+int get totalXP => _progress.totalXP;
+int get level => _progress.level;
+int get currentStreak => _progress.currentStreak;
+DailyGoals get dailyGoals => _progress.dailyGoals;
+
+/// Initialize the service
+static Future<void> init() async {
+instance._storage = EncryptedStorageService.instance;
+
+```
+// Migrate legacy plaintext data to encrypted format
+await instance._storage.migrateToEncrypted(_progressKey);
+
+await instance._loadProgress();
+```
+
 }
 
-/// Progress for individual module
-class ModuleProgress {
-  final String moduleId;
-  final Set<String> completedLessons;
-  final Map<String, int> quizScores; // quiz_id -> score percentage
-  final Map<String, int> scenarioScores;
-  final DateTime? startedAt;
-  final DateTime? completedAt;
-
-  ModuleProgress({
-    required this.moduleId,
-    Set<String>? completedLessons,
-    Map<String, int>? quizScores,
-    Map<String, int>? scenarioScores,
-    this.startedAt,
-    this.completedAt,
-  })  : completedLessons = completedLessons ?? {},
-        quizScores = quizScores ?? {},
-        scenarioScores = scenarioScores ?? {};
-
-  bool get isCompleted => completedAt != null;
-
-  double get completionPercentage {
-    // Simplified: based on completed lessons
-    // In real app, calculate based on total lessons in module
-    if (completedLessons.isEmpty) return 0;
-    return completedLessons.length / 5; // Assuming 5 lessons per module
-  }
-
-  bool get isPassed {
-    if (quizScores.isEmpty) return false;
-    return quizScores.values.every((score) => score >= 70);
-  }
-
-  Map<String, dynamic> toJson() => {
-        'moduleId': moduleId,
-        'completedLessons': completedLessons.toList(),
-        'quizScores': quizScores,
-        'scenarioScores': scenarioScores,
-        'startedAt': startedAt?.toIso8601String(),
-        'completedAt': completedAt?.toIso8601String(),
-      };
-
-  factory ModuleProgress.fromJson(Map<String, dynamic> json) => ModuleProgress(
-        moduleId: json['moduleId'] as String,
-        completedLessons: Set<String>.from(json['completedLessons'] ?? []),
-        quizScores: Map<String, int>.from(json['quizScores'] ?? {}),
-        scenarioScores: Map<String, int>.from(json['scenarioScores'] ?? {}),
-        startedAt: json['startedAt'] != null
-            ? DateTime.parse(json['startedAt'])
-            : null,
-        completedAt: json['completedAt'] != null
-            ? DateTime.parse(json['completedAt'])
-            : null,
-      );
+/// Load progress from storage
+Future<void> _loadProgress() async {
+final json = _storage.readEncrypted(_progressKey);
+if (json != null) {
+try {
+final data = jsonDecode(json) as Map<String, dynamic>;
+_progress = _parseProgress(data);
+} catch (e) {
+debugPrint(‘Error loading progress: $e’);
+_progress = UserProgress();
+}
 }
 
-/// Spaced Repetition (SM-2 algorithm)
-class SpacedRepetitionCard {
-  final String cardId;
-  int repetitions;
-  double easeFactor;
-  int interval; // days
-  DateTime? nextReviewDate;
-  DateTime? lastReviewDate;
+```
+// Reset daily goals if needed
+_progress.dailyGoals.resetIfNeeded();
+await _saveProgress();
 
-  SpacedRepetitionCard({
-    required this.cardId,
-    this.repetitions = 0,
-    this.easeFactor = 2.5,
-    this.interval = 1,
-    this.nextReviewDate,
-    this.lastReviewDate,
-  });
+notifyListeners();
+```
 
-  /// Update card based on quality of recall (0-5)
-  /// 0 - Complete blackout
-  /// 1 - Incorrect; remembered on seeing answer
-  /// 2 - Incorrect; answer seemed easy to recall
-  /// 3 - Correct; with serious difficulty
-  /// 4 - Correct; with hesitation
-  /// 5 - Perfect response
-  void updateWithQuality(int quality) {
-    lastReviewDate = DateTime.now();
+}
 
-    if (quality < 3) {
-      // Failed recall, reset
-      repetitions = 0;
-      interval = 1;
-    } else {
-      // Successful recall
-      if (repetitions == 0) {
-        interval = 1;
-      } else if (repetitions == 1) {
-        interval = 6;
-      } else {
-        interval = (interval * easeFactor).round();
-      }
-      repetitions++;
+UserProgress _parseProgress(Map<String, dynamic> data) {
+return UserProgress(
+currentLevel: NCOLevel.values[data[‘currentLevel’] ?? 0],
+totalXP: data[‘totalXP’] ?? 0,
+currentStreak: data[‘currentStreak’] ?? 0,
+lastStudyDate: data[‘lastStudyDate’] != null
+? DateTime.parse(data[‘lastStudyDate’])
+: null,
+unlockedAchievements:
+Set<String>.from(data[‘unlockedAchievements’] ?? []),
+dailyGoals: data[‘dailyGoals’] != null
+? DailyGoals.fromJson(data[‘dailyGoals’])
+: DailyGoals(),
+moduleProgress: (data[‘moduleProgress’] as Map<String, dynamic>?)?.map(
+(key, value) =>
+MapEntry(key, ModuleProgress.fromJson(value)),
+) ??
+{},
+flashcardProgress:
+(data[‘flashcardProgress’] as Map<String, dynamic>?)?.map(
+(key, value) =>
+MapEntry(key, SpacedRepetitionCard.fromJson(value)),
+) ??
+{},
+);
+}
+
+/// Save progress to local storage + sync to Firestore
+Future<void> _saveProgress() async {
+final data = {
+‘currentLevel’: _progress.currentLevel.index,
+‘totalXP’: _progress.totalXP,
+‘currentStreak’: _progress.currentStreak,
+‘lastStudyDate’: _progress.lastStudyDate?.toIso8601String(),
+‘unlockedAchievements’: _progress.unlockedAchievements.toList(),
+‘dailyGoals’: _progress.dailyGoals.toJson(),
+‘moduleProgress’: _progress.moduleProgress.map(
+(key, value) => MapEntry(key, value.toJson()),
+),
+‘flashcardProgress’: _progress.flashcardProgress.map(
+(key, value) => MapEntry(key, value.toJson()),
+),
+};
+await _storage.writeEncrypted(_progressKey, jsonEncode(data));
+
+```
+// === Sync to Firestore ===
+await _syncToFirestore();
+```
+
+}
+
+/// Sync progress data to Firestore for teacher dashboard
+Future<void> _syncToFirestore() async {
+try {
+final user = _auth.currentUser;
+if (user == null) return;
+
+```
+  final completedLessonsList = <String>[];
+  final completedModulesList = <String>[];
+  final quizScoresMap = <String, int>{};
+
+  for (final entry in _progress.moduleProgress.entries) {
+    final moduleId = entry.key;
+    final mp = entry.value;
+
+    // รวม completed lessons ทั้งหมด
+    for (final lessonId in mp.completedLessons) {
+      completedLessonsList.add('$moduleId/$lessonId');
     }
 
-    // Update ease factor
-    easeFactor = easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
-    if (easeFactor < 1.3) easeFactor = 1.3;
+    // เช็คว่า module จบหรือยัง
+    if (mp.isCompleted) {
+      completedModulesList.add(moduleId);
+    }
 
-    nextReviewDate = DateTime.now().add(Duration(days: interval));
+    // รวม quiz scores
+    quizScoresMap.addAll(mp.quizScores);
   }
 
-  bool get isDue {
-    if (nextReviewDate == null) return true;
-    return DateTime.now().isAfter(nextReviewDate!);
-  }
-
-  Map<String, dynamic> toJson() => {
-        'cardId': cardId,
-        'repetitions': repetitions,
-        'easeFactor': easeFactor,
-        'interval': interval,
-        'nextReviewDate': nextReviewDate?.toIso8601String(),
-        'lastReviewDate': lastReviewDate?.toIso8601String(),
-      };
-
-  factory SpacedRepetitionCard.fromJson(Map<String, dynamic> json) =>
-      SpacedRepetitionCard(
-        cardId: json['cardId'] as String,
-        repetitions: json['repetitions'] as int? ?? 0,
-        easeFactor: (json['easeFactor'] as num?)?.toDouble() ?? 2.5,
-        interval: json['interval'] as int? ?? 1,
-        nextReviewDate: json['nextReviewDate'] != null
-            ? DateTime.parse(json['nextReviewDate'])
-            : null,
-        lastReviewDate: json['lastReviewDate'] != null
-            ? DateTime.parse(json['lastReviewDate'])
-            : null,
-      );
-}
-
-/// Daily goals tracking
-class DailyGoals {
-  int lessonsTarget;
-  int lessonsCompleted;
-  int flashcardsTarget;
-  int flashcardsStudied;
-  int quizzesTarget;
-  int quizzesTaken;
-  int minutesTarget;
-  int minutesStudied;
-  DateTime? lastReset;
-
-  DailyGoals({
-    this.lessonsTarget = 2,
-    this.lessonsCompleted = 0,
-    this.flashcardsTarget = 20,
-    this.flashcardsStudied = 0,
-    this.quizzesTarget = 1,
-    this.quizzesTaken = 0,
-    this.minutesTarget = 30,
-    this.minutesStudied = 0,
-    this.lastReset,
+  // Update Firestore user document
+  await _firestore.collection('users').doc(user.uid).update({
+    'progress': {
+      'totalXP': _progress.totalXP,
+      'currentStreak': _progress.currentStreak,
+      'lastActiveDate': FieldValue.serverTimestamp(),
+      'completedLessons': completedLessonsList,
+      'completedModules': completedModulesList,
+      'quizScores': quizScoresMap,
+    },
   });
 
-  double get progress {
-    final lessonProgress = lessonsCompleted / lessonsTarget;
-    final flashcardProgress = flashcardsStudied / flashcardsTarget;
-    final quizProgress = quizzesTaken / quizzesTarget;
-    final minuteProgress = minutesStudied / minutesTarget;
-    return (lessonProgress + flashcardProgress + quizProgress + minuteProgress) / 4;
-  }
+  debugPrint('✅ Progress synced to Firestore: ${_progress.totalXP} XP');
+} catch (e) {
+  debugPrint('⚠️ Failed to sync progress to Firestore: $e');
+  // ไม่ throw error เพื่อไม่ให้กระทบการใช้งานปกติ
+  // ข้อมูลยังเก็บใน local storage อยู่
+}
+```
 
-  bool get isCompleted => progress >= 1.0;
-
-  void resetIfNeeded() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    if (lastReset == null || lastReset!.isBefore(today)) {
-      lessonsCompleted = 0;
-      flashcardsStudied = 0;
-      quizzesTaken = 0;
-      minutesStudied = 0;
-      lastReset = today;
-    }
-  }
-
-  Map<String, dynamic> toJson() => {
-        'lessonsTarget': lessonsTarget,
-        'lessonsCompleted': lessonsCompleted,
-        'flashcardsTarget': flashcardsTarget,
-        'flashcardsStudied': flashcardsStudied,
-        'quizzesTarget': quizzesTarget,
-        'quizzesTaken': quizzesTaken,
-        'minutesTarget': minutesTarget,
-        'minutesStudied': minutesStudied,
-        'lastReset': lastReset?.toIso8601String(),
-      };
-
-  factory DailyGoals.fromJson(Map<String, dynamic> json) => DailyGoals(
-        lessonsTarget: json['lessonsTarget'] as int? ?? 2,
-        lessonsCompleted: json['lessonsCompleted'] as int? ?? 0,
-        flashcardsTarget: json['flashcardsTarget'] as int? ?? 20,
-        flashcardsStudied: json['flashcardsStudied'] as int? ?? 0,
-        quizzesTarget: json['quizzesTarget'] as int? ?? 1,
-        quizzesTaken: json['quizzesTaken'] as int? ?? 0,
-        minutesTarget: json['minutesTarget'] as int? ?? 30,
-        minutesStudied: json['minutesStudied'] as int? ?? 0,
-        lastReset: json['lastReset'] != null
-            ? DateTime.parse(json['lastReset'])
-            : null,
-      );
 }
 
-/// Achievement definition
-class Achievement {
-  final String id;
-  final String titleTh;
-  final String descriptionTh;
-  final String icon;
-  final AchievementTier tier;
-  final AchievementType type;
-  final int requirement;
-  final int xpReward;
-
-  const Achievement({
-    required this.id,
-    required this.titleTh,
-    required this.descriptionTh,
-    required this.icon,
-    required this.tier,
-    required this.type,
-    required this.requirement,
-    required this.xpReward,
-  });
+/// Set NCO level
+Future<void> setNCOLevel(NCOLevel level) async {
+_progress = UserProgress(
+currentLevel: level,
+totalXP: _progress.totalXP,
+currentStreak: _progress.currentStreak,
+lastStudyDate: _progress.lastStudyDate,
+unlockedAchievements: _progress.unlockedAchievements,
+dailyGoals: _progress.dailyGoals,
+moduleProgress: _progress.moduleProgress,
+flashcardProgress: _progress.flashcardProgress,
+);
+await _saveProgress();
+notifyListeners();
 }
 
-enum AchievementTier { bronze, silver, gold, platinum }
+/// Add XP
+Future<void> addXP(int points) async {
+_progress = UserProgress(
+currentLevel: _progress.currentLevel,
+totalXP: _progress.totalXP + points,
+currentStreak: _progress.currentStreak,
+lastStudyDate: DateTime.now(),
+unlockedAchievements: _progress.unlockedAchievements,
+dailyGoals: _progress.dailyGoals,
+moduleProgress: _progress.moduleProgress,
+flashcardProgress: _progress.flashcardProgress,
+);
+await _saveProgress();
+notifyListeners();
+}
 
-extension AchievementTierExtension on AchievementTier {
-  String get titleTh {
-    switch (this) {
-      case AchievementTier.bronze:
-        return 'ทองแดง';
-      case AchievementTier.silver:
-        return 'เงิน';
-      case AchievementTier.gold:
-        return 'ทอง';
-      case AchievementTier.platinum:
-        return 'แพลทินัม';
-    }
+/// Complete a lesson
+Future<void> completeLesson(String moduleId, String lessonId) async {
+final moduleProgress =
+_progress.moduleProgress[moduleId] ?? ModuleProgress(moduleId: moduleId);
+moduleProgress.completedLessons.add(lessonId);
+
+```
+_progress.moduleProgress[moduleId] = moduleProgress;
+_progress.dailyGoals.lessonsCompleted++;
+
+await addXP(50); // 50 XP per lesson
+```
+
+}
+
+/// Save quiz score
+Future<void> saveQuizScore(String quizId, int score) async {
+// Find module for this quiz
+final moduleId = quizId.split(’*’).take(2).join(’*’);
+final moduleProgress =
+_progress.moduleProgress[moduleId] ?? ModuleProgress(moduleId: moduleId);
+moduleProgress.quizScores[quizId] = score;
+
+```
+_progress.moduleProgress[moduleId] = moduleProgress;
+_progress.dailyGoals.quizzesTaken++;
+
+// XP based on score
+final xp = (score / 10).round() * 10;
+await addXP(xp);
+```
+
+}
+
+/// Update flashcard with spaced repetition
+Future<void> updateFlashcard(String cardId, int quality) async {
+final card = _progress.flashcardProgress[cardId] ??
+SpacedRepetitionCard(cardId: cardId);
+card.updateWithQuality(quality);
+
+```
+_progress.flashcardProgress[cardId] = card;
+_progress.dailyGoals.flashcardsStudied++;
+
+await _saveProgress();
+notifyListeners();
+```
+
+}
+
+/// Get due flashcards
+List<String> getDueFlashcards() {
+return _progress.flashcardProgress.entries
+.where((e) => e.value.isDue)
+.map((e) => e.key)
+.toList();
+}
+
+/// Update streak
+Future<void> updateStreak() async {
+final now = DateTime.now();
+final today = DateTime(now.year, now.month, now.day);
+final lastStudy = _progress.lastStudyDate;
+
+```
+int newStreak = _progress.currentStreak;
+
+if (lastStudy == null) {
+  newStreak = 1;
+} else {
+  final lastStudyDay =
+      DateTime(lastStudy.year, lastStudy.month, lastStudy.day);
+  final dayDiff = today.difference(lastStudyDay).inDays;
+
+  if (dayDiff == 0) {
+    // Same day, no change
+  } else if (dayDiff == 1) {
+    newStreak++;
+  } else {
+    newStreak = 1; // Streak broken
   }
 }
 
-enum AchievementType {
-  lessonsCompleted,
-  flashcardsStudied,
-  quizzesPassed,
-  perfectQuiz,
-  streakDays,
-  modulesCompleted,
-  levelCompleted,
-  scenariosCompleted,
+_progress = UserProgress(
+  currentLevel: _progress.currentLevel,
+  totalXP: _progress.totalXP,
+  currentStreak: newStreak,
+  lastStudyDate: now,
+  unlockedAchievements: _progress.unlockedAchievements,
+  dailyGoals: _progress.dailyGoals,
+  moduleProgress: _progress.moduleProgress,
+  flashcardProgress: _progress.flashcardProgress,
+);
+
+await _saveProgress();
+notifyListeners();
+```
+
+}
+
+/// Check if module is completed
+bool isModuleCompleted(String moduleId) {
+final progress = _progress.moduleProgress[moduleId];
+return progress?.isCompleted ?? false;
+}
+
+/// Get module progress
+ModuleProgress? getModuleProgress(String moduleId) {
+return _progress.moduleProgress[moduleId];
+}
+
+/// Unlock achievement
+Future<void> unlockAchievement(String achievementId) async {
+if (!_progress.unlockedAchievements.contains(achievementId)) {
+_progress.unlockedAchievements.add(achievementId);
+await _saveProgress();
+notifyListeners();
+}
+}
+
+/// Reset all progress (for testing)
+Future<void> resetProgress() async {
+_progress = UserProgress();
+await _storage.remove(_progressKey);
+
+```
+// Also reset Firestore
+try {
+  final user = _auth.currentUser;
+  if (user != null) {
+    await _firestore.collection('users').doc(user.uid).update({
+      'progress': {
+        'totalXP': 0,
+        'currentStreak': 0,
+        'lastActiveDate': null,
+        'completedLessons': [],
+        'completedModules': [],
+        'quizScores': {},
+      },
+    });
+  }
+} catch (e) {
+  debugPrint('⚠️ Failed to reset Firestore progress: $e');
+}
+
+notifyListeners();
+```
+
+}
 }
