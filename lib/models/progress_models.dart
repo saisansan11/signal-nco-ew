@@ -1,4 +1,5 @@
 import ‘curriculum_models.dart’;
+
 /// User progress tracking
 class UserProgress {
 final NCOLevel currentLevel;
@@ -9,6 +10,7 @@ final DateTime? lastStudyDate;
 final Set<String> unlockedAchievements;
 final DailyGoals dailyGoals;
 final Map<String, SpacedRepetitionCard> flashcardProgress;
+
 UserProgress({
 this.currentLevel = NCOLevel.junior,
 Map<String, ModuleProgress>? moduleProgress,
@@ -22,21 +24,26 @@ Map<String, SpacedRepetitionCard>? flashcardProgress,
 unlockedAchievements = unlockedAchievements ?? {},
 dailyGoals = dailyGoals ?? DailyGoals(),
 flashcardProgress = flashcardProgress ?? {};
+
 int get level => (totalXP / 100).floor() + 1;
+
 double get overallProgress {
 if (moduleProgress.isEmpty) return 0;
 final completed =
 moduleProgress.values.where((m) => m.isCompleted).length;
 return completed / moduleProgress.length;
 }
+
 bool get isJuniorComplete {
 // Check if all junior modules are completed
 return moduleProgress.entries
 .where((e) => e.key.startsWith(‘junior_’))
 .every((e) => e.value.isCompleted);
 }
+
 bool get canAccessSenior => isJuniorComplete || currentLevel == NCOLevel.senior;
 }
+
 /// Progress for individual module
 class ModuleProgress {
 final String moduleId;
@@ -45,6 +52,7 @@ final Map<String, int> quizScores; // quiz_id -> score percentage
 final Map<String, int> scenarioScores;
 final DateTime? startedAt;
 final DateTime? completedAt;
+
 ModuleProgress({
 required this.moduleId,
 Set<String>? completedLessons,
@@ -55,17 +63,21 @@ this.completedAt,
 })  : completedLessons = completedLessons ?? {},
 quizScores = quizScores ?? {},
 scenarioScores = scenarioScores ?? {};
+
 bool get isCompleted => completedAt != null;
+
 double get completionPercentage {
 // Simplified: based on completed lessons
 // In real app, calculate based on total lessons in module
 if (completedLessons.isEmpty) return 0;
 return completedLessons.length / 5; // Assuming 5 lessons per module
 }
+
 bool get isPassed {
 if (quizScores.isEmpty) return false;
 return quizScores.values.every((score) => score >= 70);
 }
+
 Map<String, dynamic> toJson() => {
 ‘moduleId’: moduleId,
 ‘completedLessons’: completedLessons.toList(),
@@ -74,6 +86,7 @@ Map<String, dynamic> toJson() => {
 ‘startedAt’: startedAt?.toIso8601String(),
 ‘completedAt’: completedAt?.toIso8601String(),
 };
+
 factory ModuleProgress.fromJson(Map<String, dynamic> json) => ModuleProgress(
 moduleId: json[‘moduleId’] as String,
 completedLessons: Set<String>.from(json[‘completedLessons’] ?? []),
@@ -87,6 +100,7 @@ completedAt: json[‘completedAt’] != null
 : null,
 );
 }
+
 /// Spaced Repetition (SM-2 algorithm)
 class SpacedRepetitionCard {
 final String cardId;
@@ -95,6 +109,7 @@ double easeFactor;
 int interval; // days
 DateTime? nextReviewDate;
 DateTime? lastReviewDate;
+
 SpacedRepetitionCard({
 required this.cardId,
 this.repetitions = 0,
@@ -103,6 +118,7 @@ this.interval = 1,
 this.nextReviewDate,
 this.lastReviewDate,
 });
+
 /// Update card based on quality of recall (0-5)
 /// 0 - Complete blackout
 /// 1 - Incorrect; remembered on seeing answer
@@ -113,6 +129,7 @@ this.lastReviewDate,
 void updateWithQuality(int quality) {
 lastReviewDate = DateTime.now();
 
+```
 if (quality < 3) {
   // Failed recall, reset
   repetitions = 0;
@@ -134,13 +151,15 @@ easeFactor = easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
 if (easeFactor < 1.3) easeFactor = 1.3;
 
 nextReviewDate = DateTime.now().add(Duration(days: interval));
-
+```
 
 }
+
 bool get isDue {
 if (nextReviewDate == null) return true;
 return DateTime.now().isAfter(nextReviewDate!);
 }
+
 Map<String, dynamic> toJson() => {
 ‘cardId’: cardId,
 ‘repetitions’: repetitions,
@@ -149,6 +168,7 @@ Map<String, dynamic> toJson() => {
 ‘nextReviewDate’: nextReviewDate?.toIso8601String(),
 ‘lastReviewDate’: lastReviewDate?.toIso8601String(),
 };
+
 factory SpacedRepetitionCard.fromJson(Map<String, dynamic> json) =>
 SpacedRepetitionCard(
 cardId: json[‘cardId’] as String,
@@ -163,6 +183,7 @@ lastReviewDate: json[‘lastReviewDate’] != null
 : null,
 );
 }
+
 /// Daily goals tracking
 class DailyGoals {
 int lessonsTarget;
@@ -174,6 +195,7 @@ int quizzesTaken;
 int minutesTarget;
 int minutesStudied;
 DateTime? lastReset;
+
 DailyGoals({
 this.lessonsTarget = 2,
 this.lessonsCompleted = 0,
@@ -185,6 +207,7 @@ this.minutesTarget = 30,
 this.minutesStudied = 0,
 this.lastReset,
 });
+
 double get progress {
 final lessonProgress = lessonsCompleted / lessonsTarget;
 final flashcardProgress = flashcardsStudied / flashcardsTarget;
@@ -192,11 +215,14 @@ final quizProgress = quizzesTaken / quizzesTarget;
 final minuteProgress = minutesStudied / minutesTarget;
 return (lessonProgress + flashcardProgress + quizProgress + minuteProgress) / 4;
 }
+
 bool get isCompleted => progress >= 1.0;
+
 void resetIfNeeded() {
 final now = DateTime.now();
 final today = DateTime(now.year, now.month, now.day);
 
+```
 if (lastReset == null || lastReset!.isBefore(today)) {
   lessonsCompleted = 0;
   flashcardsStudied = 0;
@@ -204,9 +230,10 @@ if (lastReset == null || lastReset!.isBefore(today)) {
   minutesStudied = 0;
   lastReset = today;
 }
-
+```
 
 }
+
 Map<String, dynamic> toJson() => {
 ‘lessonsTarget’: lessonsTarget,
 ‘lessonsCompleted’: lessonsCompleted,
@@ -218,6 +245,7 @@ Map<String, dynamic> toJson() => {
 ‘minutesStudied’: minutesStudied,
 ‘lastReset’: lastReset?.toIso8601String(),
 };
+
 factory DailyGoals.fromJson(Map<String, dynamic> json) => DailyGoals(
 lessonsTarget: json[‘lessonsTarget’] as int? ?? 2,
 lessonsCompleted: json[‘lessonsCompleted’] as int? ?? 0,
@@ -232,6 +260,7 @@ lastReset: json[‘lastReset’] != null
 : null,
 );
 }
+
 /// Achievement definition
 class Achievement {
 final String id;
@@ -242,6 +271,7 @@ final AchievementTier tier;
 final AchievementType type;
 final int requirement;
 final int xpReward;
+
 const Achievement({
 required this.id,
 required this.titleTh,
@@ -253,7 +283,9 @@ required this.requirement,
 required this.xpReward,
 });
 }
+
 enum AchievementTier { bronze, silver, gold, platinum }
+
 extension AchievementTierExtension on AchievementTier {
 String get titleTh {
 switch (this) {
@@ -268,6 +300,7 @@ return ‘แพลทินัม’;
 }
 }
 }
+
 enum AchievementType {
 lessonsCompleted,
 flashcardsStudied,
