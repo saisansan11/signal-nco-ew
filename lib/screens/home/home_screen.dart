@@ -8,6 +8,7 @@ import '../../models/curriculum_models.dart';
 import '../../models/progress_models.dart';
 import '../../services/progress_service.dart';
 import '../interactive/df_sim_screen.dart';
+import '../interactive/drone_sim_screen.dart';
 import '../interactive/jamming_sim_screen.dart';
 import '../interactive/radar_sim_screen.dart';
 import '../interactive/spectrum_sim_screen.dart';
@@ -1129,6 +1130,13 @@ class _SimulationsTab extends StatelessWidget {
         subtitle: 'ฝึก Triangulation หาตำแหน่ง',
         color: AppColors.esColor,
         screen: const DFSimScreen(),
+      ),
+      _SimulationItem(
+        icon: Icons.shield,
+        title: 'ต่อต้านโดรน',
+        subtitle: 'ตรวจจับ จำแนก ทำลายโดรนข้าศึก',
+        color: AppColors.droneColor,
+        screen: const DroneSimScreen(),
       ),
     ];
 
