@@ -17,6 +17,7 @@ class ProgressService extends ChangeNotifier {
   UserProgress _progress = UserProgress();
 
   static const String _progressKey = 'user_progress';
+  static const String _activityMigratedKey = 'activity_log_migrated';
 
   // Firestore reference
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -55,6 +56,9 @@ class ProgressService extends ChangeNotifier {
     // Reset daily goals if needed
     _progress.dailyGoals.resetIfNeeded();
     await _saveProgress();
+
+    // Backfill activity_log from existing progress (one-time)
+    await _migrateExistingActivityLog();
 
     notifyListeners();
   }
@@ -148,6 +152,82 @@ class ProgressService extends ChangeNotifier {
       debugPrint('Progress synced to Firestore: ${_progress.totalXP} XP');
     } catch (e) {
       debugPrint('Failed to sync progress to Firestore: $e');
+    }
+  }
+
+  /// Migrate existing progress data to activity_log (one-time)
+  Future<void> _migrateExistingActivityLog() async {
+    // Check if already migrated
+    final migrated = _storage.readEncrypted(_activityMigratedKey);
+    if (migrated == 'true') return;
+
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final displayName = user.displayName ?? user.email ?? 'ไม่ระบุ';
+    final batch = _firestore.batch();
+    int count = 0;
+
+    try {
+      for (final entry in _progress.moduleProgress.entries) {
+        final moduleId = entry.key;
+        final mp = entry.value;
+
+        // Log each completed lesson
+        for (final lessonId in mp.completedLessons) {
+          final ref = _firestore.collection('activity_log').doc();
+          batch.set(ref, {
+            'userId': user.uid,
+            'userName': displayName,
+            'type': 'lesson_completed',
+            'details': 'เรียนจบบทเรียน $lessonId (ข้อมูลย้อนหลัง)',
+            'timestamp': mp.completedAt ?? FieldValue.serverTimestamp(),
+            'migrated': true,
+          });
+          count++;
+        }
+
+        // Log each quiz score
+        for (final quizEntry in mp.quizScores.entries) {
+          final quizId = quizEntry.key;
+          final score = quizEntry.value;
+          final passed = score >= 70;
+          final ref = _firestore.collection('activity_log').doc();
+          batch.set(ref, {
+            'userId': user.uid,
+            'userName': displayName,
+            'type': passed ? 'quiz_passed' : 'lesson_completed',
+            'details': 'ทำแบบทดสอบ $quizId ได้ $score% ${passed ? "(ผ่าน)" : "(ไม่ผ่าน)"} (ข้อมูลย้อนหลัง)',
+            'timestamp': mp.completedAt ?? FieldValue.serverTimestamp(),
+            'migrated': true,
+          });
+          count++;
+        }
+
+        // Log module completion
+        if (mp.isCompleted) {
+          final ref = _firestore.collection('activity_log').doc();
+          batch.set(ref, {
+            'userId': user.uid,
+            'userName': displayName,
+            'type': 'lesson_completed',
+            'details': 'เรียนจบโมดูล $moduleId ครบทุกบทเรียนแล้ว (ข้อมูลย้อนหลัง)',
+            'timestamp': mp.completedAt ?? FieldValue.serverTimestamp(),
+            'migrated': true,
+          });
+          count++;
+        }
+      }
+
+      if (count > 0) {
+        await batch.commit();
+        debugPrint('Migrated $count activity log entries to Firestore');
+      }
+
+      // Mark as migrated
+      await _storage.writeEncrypted(_activityMigratedKey, 'true');
+    } catch (e) {
+      debugPrint('Failed to migrate activity log: $e');
     }
   }
 
