@@ -1,9 +1,14 @@
 // Login Screen with Google Sign-In
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../app/constants.dart';
 import '../../services/auth_service.dart';
+import '../../services/user_role_service.dart';
 import '../home/home_screen.dart';
+import '../home/teacher_home_screen.dart';
+import '../onboarding/level_selection_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,9 +32,25 @@ class _LoginScreenState extends State<LoginScreen> {
       final userCredential = await _authService.signInWithGoogle();
 
       if (userCredential != null && mounted) {
-        // Navigate to home screen
+        // Check role and navigate accordingly
+        final roleService = Provider.of<UserRoleService>(context, listen: false);
+        await roleService.checkAndSetRole();
+
+        if (!mounted) return;
+
+        Widget targetScreen;
+        if (roleService.isTeacher) {
+          targetScreen = const TeacherHomeScreen();
+        } else {
+          final prefs = await SharedPreferences.getInstance();
+          final hasSelectedLevel = prefs.containsKey('user_progress');
+          targetScreen = hasSelectedLevel
+              ? const HomeScreen()
+              : const LevelSelectionScreen();
+        }
+
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          MaterialPageRoute(builder: (_) => targetScreen),
         );
       }
     } catch (e) {

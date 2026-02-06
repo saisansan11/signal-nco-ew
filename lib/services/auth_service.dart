@@ -36,6 +36,11 @@ class AuthService {
       return _cachedTeacherEmails!;
     }
 
+    // Always start with fallback emails
+    final allEmails = <String>{
+      ..._fallbackTeacherEmails.map((e) => e.toLowerCase()),
+    };
+
     try {
       final doc = await _firestore
           .collection('config')
@@ -44,19 +49,21 @@ class AuthService {
 
       if (doc.exists) {
         final data = doc.data();
-        final emails = (data?['emails'] as List<dynamic>?)
-                ?.map((e) => e.toString().toLowerCase())
-                .toList() ??
-            _fallbackTeacherEmails;
-        _cachedTeacherEmails = emails;
-        _teacherCacheTime = DateTime.now();
-        return emails;
+        final firestoreEmails = (data?['emails'] as List<dynamic>?)
+            ?.map((e) => e.toString().toLowerCase())
+            .toList();
+        if (firestoreEmails != null && firestoreEmails.isNotEmpty) {
+          allEmails.addAll(firestoreEmails);
+        }
       }
     } catch (e) {
-      // Firestore config not available, use fallback
+      debugPrint('AuthService: Could not load teacher whitelist from Firestore: $e');
     }
 
-    return _fallbackTeacherEmails;
+    _cachedTeacherEmails = allEmails.toList();
+    _teacherCacheTime = DateTime.now();
+    debugPrint('AuthService: Teacher emails loaded: $_cachedTeacherEmails');
+    return _cachedTeacherEmails!;
   }
 
   // ตรวจสอบว่าเป็นครูหรือไม่ (จาก email)
@@ -69,15 +76,30 @@ class AuthService {
   // ตรวจสอบว่า user ปัจจุบันเป็นครูหรือไม่
   Future<bool> isCurrentUserTeacher() async {
     final user = currentUser;
-    if (user == null) return false;
+    if (user == null) {
+      debugPrint('AuthService: isCurrentUserTeacher - no user logged in');
+      return false;
+    }
+
+    debugPrint('AuthService: Checking teacher status for ${user.email}');
 
     // ตรวจจาก email whitelist ก่อน (จาก Firestore config)
-    if (await isTeacherByEmail(user.email)) return true;
+    if (await isTeacherByEmail(user.email)) {
+      debugPrint('AuthService: ${user.email} is teacher (email whitelist)');
+      return true;
+    }
 
     // ถ้าไม่อยู่ใน whitelist ให้ตรวจจาก Firestore user document
-    final doc = await _firestore.collection('users').doc(user.uid).get();
-    final data = doc.data();
-    return data?['role'] == 'teacher';
+    try {
+      final doc = await _firestore.collection('users').doc(user.uid).get();
+      final data = doc.data();
+      final isTeacher = data?['role'] == 'teacher';
+      debugPrint('AuthService: Firestore role check = ${data?['role']} (isTeacher: $isTeacher)');
+      return isTeacher;
+    } catch (e) {
+      debugPrint('AuthService: Error reading user doc: $e');
+      return false;
+    }
   }
 
   // ตั้ง role เป็น teacher (สำหรับ admin ใช้)
