@@ -64,6 +64,7 @@ enum MissionType {
   eccm,       // Electronic Counter-Counter Measures
   radar,      // Radar Operations
   df,         // Direction Finding
+  antiDrone,  // Counter-UAS Operations
   combined,   // Combined Operations
 }
 
@@ -80,6 +81,8 @@ extension MissionTypeExtension on MissionType {
         return 'เรดาร์';
       case MissionType.df:
         return 'หาทิศทาง';
+      case MissionType.antiDrone:
+        return 'ต่อต้านโดรน';
       case MissionType.combined:
         return 'ผสม';
     }
@@ -97,6 +100,8 @@ extension MissionTypeExtension on MissionType {
         return AppColors.radarColor;
       case MissionType.df:
         return AppColors.info;
+      case MissionType.antiDrone:
+        return AppColors.droneColor;
       case MissionType.combined:
         return AppColors.primary;
     }
@@ -114,6 +119,8 @@ extension MissionTypeExtension on MissionType {
         return Icons.radar;
       case MissionType.df:
         return Icons.location_searching;
+      case MissionType.antiDrone:
+        return Icons.flight_takeoff;
       case MissionType.combined:
         return Icons.military_tech;
     }

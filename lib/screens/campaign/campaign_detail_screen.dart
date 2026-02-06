@@ -8,6 +8,7 @@ import '../interactive/radar_sim_screen.dart';
 import '../interactive/spectrum_sim_screen.dart';
 import '../interactive/jamming_sim_screen.dart';
 import '../interactive/df_sim_screen.dart';
+import '../interactive/drone_sim_screen.dart';
 
 /// Campaign Detail Screen - แสดงรายละเอียด Campaign และ Mission
 class CampaignDetailScreen extends StatefulWidget {
@@ -261,6 +262,9 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
         break;
       case MissionType.df:
         simulationScreen = const DFSimScreen();
+        break;
+      case MissionType.antiDrone:
+        simulationScreen = const DroneSimScreen();
         break;
       case MissionType.combined:
         // For combined missions, show a selection dialog

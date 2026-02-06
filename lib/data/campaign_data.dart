@@ -662,6 +662,151 @@ class CampaignData {
         ),
       ],
     ),
+
+    // Campaign 6: Counter-UAS (Drone Shield)
+    Campaign(
+      id: 'drone_1',
+      name: 'Drone Shield',
+      nameTh: 'โล่ป้องกันโดรน',
+      description: 'Learn Counter-UAS operations: detect, identify, and neutralize hostile drones',
+      descriptionTh: 'เรียนรู้การต่อต้านโดรน: ตรวจจับ จำแนก และทำลายโดรนข้าศึก',
+      storyIntro: '''
+สถานการณ์: ฐานปฏิบัติการถูกคุกคามจากโดรนข้าศึกหลายประเภท
+ทั้งโดรนลาดตระเวน, FPV โจมตี, ฝูงโดรน และโดรนขนส่งอาวุธ
+
+ในฐานะผู้บัญชาการระบบต่อต้านโดรน คุณต้อง:
+1. ใช้เรดาร์ตรวจจับโดรนในพื้นที่
+2. วิเคราะห์สัญญาณ RF เพื่อจำแนกประเภท
+3. เลือกมาตรการตอบโต้ที่เหมาะสม
+
+พร้อมปกป้องฐานหรือยัง?
+''',
+      difficulty: CampaignDifficulty.sergeant,
+      totalXp: 400,
+      missions: [
+        CampaignMission(
+          id: 'drone_1_detect',
+          name: 'Drone Detection',
+          nameTh: 'ตรวจจับโดรน',
+          description: 'Detect hostile drones using radar',
+          descriptionTh: 'ใช้เรดาร์ตรวจจับโดรนข้าศึกในพื้นที่',
+          briefing: '''
+ภารกิจ: ตรวจจับโดรนข้าศึกที่บินเข้ามาในพื้นที่
+1. เปิดระบบเรดาร์สแกน
+2. ระบุจุดเป้าหมายบนแผนที่ยุทธวิธี
+3. ตรวจจับโดรนให้ครบทุกลำ
+
+เป้าหมาย: ตรวจจับโดรนทั้งหมดในพื้นที่
+''',
+          type: MissionType.antiDrone,
+          difficulty: CampaignDifficulty.soldier,
+          timeLimit: 120,
+          xpReward: 80,
+          objectives: [
+            MissionObjective(
+              id: 'detect_drones',
+              description: 'Detect all drones in the area',
+              descriptionTh: 'ตรวจจับโดรนทั้งหมดในพื้นที่',
+              targetValue: 5,
+              type: 'detect',
+            ),
+          ],
+        ),
+        CampaignMission(
+          id: 'drone_2_identify',
+          name: 'Drone Classification',
+          nameTh: 'จำแนกประเภทโดรน',
+          description: 'Classify drone types using RF signatures',
+          descriptionTh: 'จำแนกประเภทโดรนจากลายเซ็นสัญญาณ RF',
+          briefing: '''
+ภารกิจ: จำแนกประเภทโดรนจากสัญญาณ RF
+1. วิเคราะห์ย่านความถี่ที่โดรนใช้สื่อสาร
+2. เทียบกับฐานข้อมูล RF Fingerprint
+3. ระบุประเภทให้ถูกต้อง (ลาดตระเวน, FPV, ฝูง, โจมตี)
+
+เป้าหมาย: จำแนกโดรนถูกต้องอย่างน้อย 3 ลำ
+''',
+          type: MissionType.antiDrone,
+          difficulty: CampaignDifficulty.sergeant,
+          timeLimit: 180,
+          xpReward: 100,
+          objectives: [
+            MissionObjective(
+              id: 'identify_drones',
+              description: 'Correctly classify drone types',
+              descriptionTh: 'จำแนกประเภทโดรนให้ถูกต้อง',
+              targetValue: 3,
+              type: 'identify',
+            ),
+          ],
+        ),
+        CampaignMission(
+          id: 'drone_3_neutralize',
+          name: 'Drone Neutralization',
+          nameTh: 'รบกวนสัญญาณโดรน',
+          description: 'Neutralize drones with appropriate countermeasures',
+          descriptionTh: 'เลือกมาตรการตอบโต้ที่เหมาะสมเพื่อทำลายโดรน',
+          briefing: '''
+ภารกิจ: ทำลายโดรนข้าศึกด้วยมาตรการที่เหมาะสม
+1. รบกวน RF - สำหรับโดรนลาดตระเวน
+2. หลอก GPS - สำหรับโดรน FPV
+3. รบกวนกว้าง - สำหรับฝูงโดรน
+4. สกัดกั้น - สำหรับโดรนโจมตีขนาดใหญ่
+
+เป้าหมาย: ทำลายโดรนอย่างน้อย 4 ลำ
+''',
+          type: MissionType.antiDrone,
+          difficulty: CampaignDifficulty.sergeant,
+          timeLimit: 240,
+          xpReward: 100,
+          objectives: [
+            MissionObjective(
+              id: 'neutralize_drones',
+              description: 'Neutralize drones with correct countermeasures',
+              descriptionTh: 'ทำลายโดรนด้วยมาตรการที่ถูกต้อง',
+              targetValue: 4,
+              type: 'jam',
+            ),
+          ],
+        ),
+        CampaignMission(
+          id: 'drone_4_defense',
+          name: 'Shield Commander',
+          nameTh: 'ผู้บัญชาการโล่',
+          description: 'Full defense scenario: detect, identify, and neutralize all waves',
+          descriptionTh: 'ภารกิจเต็มรูปแบบ: ตรวจจับ จำแนก และทำลายโดรนทุก Wave',
+          briefing: '''
+ภารกิจ: ปกป้องฐานจากการโจมตีโดรน 3 Wave
+1. Wave 1: โดรน 3 ลำ
+2. Wave 2: โดรน 4 ลำ
+3. Wave 3: โดรน 5 ลำ
+
+ต้องผ่านทั้ง 3 ขั้นตอน: สแกน → จำแนก → ทำลาย
+เป้าหมาย: ทำคะแนนรวมอย่างน้อย 70%
+''',
+          type: MissionType.antiDrone,
+          difficulty: CampaignDifficulty.officer,
+          timeLimit: 420,
+          xpReward: 120,
+          objectives: [
+            MissionObjective(
+              id: 'survive_waves',
+              description: 'Survive all 3 waves',
+              descriptionTh: 'ผ่านทั้ง 3 Wave',
+              targetValue: 3,
+              type: 'survive',
+            ),
+            MissionObjective(
+              id: 'score_70',
+              description: 'Achieve at least 70% score',
+              descriptionTh: 'ทำคะแนนอย่างน้อย 70%',
+              targetValue: 70,
+              type: 'detect',
+            ),
+          ],
+        ),
+      ],
+    ),
   ];
 
   /// Get campaign by ID
