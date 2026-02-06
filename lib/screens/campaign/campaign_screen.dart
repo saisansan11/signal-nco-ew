@@ -178,7 +178,10 @@ class _CampaignScreenState extends State<CampaignScreen> {
       MaterialPageRoute(
         builder: (context) => CampaignDetailScreen(campaign: campaign),
       ),
-    );
+    ).then((_) {
+      // Refresh star count and unlock status when returning
+      if (mounted) setState(() {});
+    });
   }
 
   void _showLockedDialog(Campaign campaign) {

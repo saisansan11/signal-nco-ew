@@ -22,6 +22,8 @@ import '../../widgets/educational/antenna_pattern_widget.dart';
 import '../../widgets/educational/link_budget_widget.dart';
 import '../../widgets/educational/gps_warfare_widget.dart';
 import '../../widgets/educational/df_triangulation_widget.dart';
+import 'package:provider/provider.dart';
+import '../../services/progress_service.dart';
 
 /// หน้าจอแสดงเนื้อหาบทเรียน
 class LessonScreen extends StatefulWidget {
@@ -7181,6 +7183,14 @@ J/S = (Pj + Gj - PLj) - (Pt + Gt - PLt)
   }
 
   void _showLessonComplete() {
+    // Save lesson completion to progress service
+    final progressService = context.read<ProgressService>();
+    progressService.completeLesson(
+      widget.module.id,
+      widget.lesson.id,
+      totalLessonsInModule: widget.module.totalLessons,
+    );
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(

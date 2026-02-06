@@ -133,7 +133,8 @@ class ProgressService extends ChangeNotifier {
         quizScoresMap.addAll(mp.quizScores);
       }
 
-      await _firestore.collection('users').doc(user.uid).update({
+      // Use set with merge to avoid errors when document/field doesn't exist
+      await _firestore.collection('users').doc(user.uid).set({
         'progress': {
           'totalXP': _progress.totalXP,
           'currentStreak': _progress.currentStreak,
@@ -142,11 +143,34 @@ class ProgressService extends ChangeNotifier {
           'completedModules': completedModulesList,
           'quizScores': quizScoresMap,
         },
-      });
+      }, SetOptions(merge: true));
 
       debugPrint('Progress synced to Firestore: ${_progress.totalXP} XP');
     } catch (e) {
       debugPrint('Failed to sync progress to Firestore: $e');
+    }
+  }
+
+  /// Log activity to Firestore for teacher dashboard
+  Future<void> _logActivity({
+    required String type,
+    required String details,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      final displayName = user.displayName ?? user.email ?? 'ไม่ระบุ';
+
+      await _firestore.collection('activity_log').add({
+        'userId': user.uid,
+        'userName': displayName,
+        'type': type,
+        'details': details,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('Failed to log activity: $e');
     }
   }
 
@@ -183,14 +207,34 @@ class ProgressService extends ChangeNotifier {
   }
 
   /// Complete a lesson
-  Future<void> completeLesson(String moduleId, String lessonId) async {
+  Future<void> completeLesson(String moduleId, String lessonId, {int totalLessonsInModule = 0}) async {
     final moduleProgress =
         _progress.moduleProgress[moduleId] ??
         ModuleProgress(moduleId: moduleId);
+
+    // Avoid duplicate completion
+    if (moduleProgress.completedLessons.contains(lessonId)) return;
+
     moduleProgress.completedLessons.add(lessonId);
+
+    // Check if all lessons in module are completed
+    if (totalLessonsInModule > 0 &&
+        moduleProgress.completedLessons.length >= totalLessonsInModule &&
+        !moduleProgress.isCompleted) {
+      moduleProgress.markCompleted();
+      await _logActivity(
+        type: 'lesson_completed',
+        details: 'เรียนจบโมดูล $moduleId ครบทุกบทเรียนแล้ว',
+      );
+    }
 
     _progress.moduleProgress[moduleId] = moduleProgress;
     _progress.dailyGoals.lessonsCompleted++;
+
+    await _logActivity(
+      type: 'lesson_completed',
+      details: 'เรียนจบบทเรียน $lessonId',
+    );
 
     await addXP(50); // 50 XP per lesson
   }
@@ -206,6 +250,12 @@ class ProgressService extends ChangeNotifier {
 
     _progress.moduleProgress[moduleId] = moduleProgress;
     _progress.dailyGoals.quizzesTaken++;
+
+    final passed = score >= 70;
+    await _logActivity(
+      type: passed ? 'quiz_passed' : 'lesson_completed',
+      details: 'ทำแบบทดสอบ $quizId ได้ $score% ${passed ? "(ผ่าน)" : "(ไม่ผ่าน)"}',
+    );
 
     // XP based on score
     final xp = (score / 10).round() * 10;

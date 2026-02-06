@@ -51,7 +51,7 @@ class ModuleProgress {
   final Map<String, int> quizScores; // quiz_id -> score percentage
   final Map<String, int> scenarioScores;
   final DateTime? startedAt;
-  final DateTime? completedAt;
+  DateTime? completedAt;
 
   ModuleProgress({
     required this.moduleId,
@@ -65,6 +65,11 @@ class ModuleProgress {
        scenarioScores = scenarioScores ?? {};
 
   bool get isCompleted => completedAt != null;
+
+  /// Mark this module as completed
+  void markCompleted() {
+    completedAt ??= DateTime.now();
+  }
 
   double get completionPercentage {
     // Simplified: based on completed lessons

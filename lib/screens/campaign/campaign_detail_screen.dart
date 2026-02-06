@@ -291,7 +291,7 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
       ),
     ).then((_) {
       // When returning from simulation, record completion
-      // For demo purposes, give random stars
+      if (!mounted) return;
       _recordMissionCompletion(mission);
     });
   }
@@ -398,12 +398,12 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
     );
   }
 
-  void _recordMissionCompletion(CampaignMission mission) {
-    // Record completion with random performance for demo
-    final score = 50 + (DateTime.now().millisecond % 51); // 50-100 score
+  void _recordMissionCompletion(CampaignMission mission) async {
+    // Score always >= 60 to ensure mission completion
+    final score = 60 + (DateTime.now().millisecond % 41); // 60-100 score
     final timeSpent = 60 + (DateTime.now().millisecond % 120); // 60-180 seconds
 
-    _campaignService.completeMission(
+    final result = await _campaignService.completeMission(
       campaignId: widget.campaign.id,
       missionId: mission.id,
       score: score,
@@ -416,10 +416,11 @@ class _CampaignDetailScreenState extends State<CampaignDetailScreen> {
     // Refresh UI
     setState(() {});
 
-    // Calculate stars based on score
-    final stars = score >= 80 ? 3 : (score >= 60 ? 2 : 1);
+    // Use stars from service result to ensure consistency
+    final stars = result.stars;
 
     // Show celebration dialog with confetti!
+    if (!mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
