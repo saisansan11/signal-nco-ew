@@ -8,6 +8,7 @@ import '../../models/progress_models.dart';
 import '../../services/auth_service.dart';
 import '../../services/progress_service.dart';
 import '../progress/progress_dashboard_screen.dart';
+import '../auth/login_screen.dart';
 import '../teacher/teacher_dashboard_screen.dart';
 
 /// Profile Screen - User-friendly for all ages
@@ -333,6 +334,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                 subtitle: 'เวอร์ชัน 1.0.0',
                 onTap: () => _showAboutDialog(context),
               ),
+              const Divider(height: 1, indent: 56),
+
+              // ออกจากระบบ
+              _SettingsTile(
+                icon: Icons.logout,
+                title: 'ออกจากระบบ',
+                subtitle: 'ลงชื่อออกจากบัญชีปัจจุบัน',
+                onTap: () => _showLogoutDialog(context),
+              ),
             ],
           ),
         ),
@@ -461,6 +471,63 @@ class _ProfileScreenState extends State<ProfileScreen>
               backgroundColor: AppColors.error,
             ),
             child: const Text('รีเซ็ต', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusL),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.logout, color: AppColors.error),
+            const SizedBox(width: 8),
+            Text(
+              'ออกจากระบบ',
+              style: AppTextStyles.titleLarge.copyWith(
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'คุณต้องการออกจากระบบหรือไม่?\n\nข้อมูลความก้าวหน้าจะถูกบันทึกไว้ สามารถเข้าสู่ระบบกลับมาได้ตลอดเวลา',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'ยกเลิก',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await AuthService().signOut();
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (_) => const LoginScreen(),
+                  ),
+                  (route) => false,
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            child: const Text('ออกจากระบบ', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
