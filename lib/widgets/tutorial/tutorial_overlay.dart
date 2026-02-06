@@ -129,12 +129,6 @@ class _TutorialOverlayState extends State<TutorialOverlay>
     _completeTutorial();
   }
 
-  /// Show tutorial manually (e.g., from help button)
-  static Future<void> showTutorialFor(BuildContext context, String key) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('tutorial_$key', false);
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {

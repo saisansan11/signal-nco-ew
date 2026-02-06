@@ -47,7 +47,7 @@ class JuniorNCOCurriculum {
         ),
         Lesson(
           id: 'junior_0_4',
-          titleTh: 'แบบทดสอบบทที่ 0',
+          titleTh: 'แบบทดสอบบทที่ 1',
           type: LessonType.quiz,
           order: 4,
           estimatedMinutes: 5,
@@ -87,7 +87,7 @@ class JuniorNCOCurriculum {
         ),
         Lesson(
           id: 'junior_1_3',
-          titleTh: 'แบบทดสอบบทที่ 1',
+          titleTh: 'แบบทดสอบบทที่ 2',
           type: LessonType.quiz,
           order: 3,
           estimatedMinutes: 3,
@@ -127,7 +127,7 @@ class JuniorNCOCurriculum {
         ),
         Lesson(
           id: 'junior_2_3',
-          titleTh: 'แบบทดสอบบทที่ 2',
+          titleTh: 'แบบทดสอบบทที่ 3',
           type: LessonType.quiz,
           order: 3,
           estimatedMinutes: 5,
@@ -175,7 +175,7 @@ class JuniorNCOCurriculum {
         ),
         Lesson(
           id: 'junior_3_4',
-          titleTh: 'แบบทดสอบบทที่ 3',
+          titleTh: 'แบบทดสอบบทที่ 4',
           type: LessonType.quiz,
           order: 4,
           estimatedMinutes: 3,
@@ -216,7 +216,7 @@ class JuniorNCOCurriculum {
         ),
         Lesson(
           id: 'junior_4_3',
-          titleTh: 'แบบทดสอบบทที่ 4',
+          titleTh: 'แบบทดสอบบทที่ 5',
           type: LessonType.quiz,
           order: 3,
           estimatedMinutes: 7,
@@ -257,7 +257,7 @@ class JuniorNCOCurriculum {
         ),
         Lesson(
           id: 'junior_5_3',
-          titleTh: 'แบบทดสอบบทที่ 5',
+          titleTh: 'แบบทดสอบบทที่ 6',
           type: LessonType.quiz,
           order: 3,
           estimatedMinutes: 5,
@@ -298,7 +298,7 @@ class JuniorNCOCurriculum {
         ),
         Lesson(
           id: 'junior_6_3',
-          titleTh: 'แบบทดสอบบทที่ 6',
+          titleTh: 'แบบทดสอบบทที่ 7',
           type: LessonType.quiz,
           order: 3,
           estimatedMinutes: 5,
@@ -339,7 +339,7 @@ class JuniorNCOCurriculum {
         ),
         Lesson(
           id: 'junior_7_3',
-          titleTh: 'แบบทดสอบบทที่ 7',
+          titleTh: 'แบบทดสอบบทที่ 8',
           type: LessonType.quiz,
           order: 3,
           estimatedMinutes: 5,
@@ -394,7 +394,7 @@ class SeniorNCOCurriculum {
         ),
         Lesson(
           id: 'senior_8_4',
-          titleTh: 'แบบทดสอบบทที่ 8',
+          titleTh: 'แบบทดสอบบทที่ 9',
           type: LessonType.quiz,
           order: 4,
           estimatedMinutes: 3,
@@ -441,7 +441,7 @@ class SeniorNCOCurriculum {
         ),
         Lesson(
           id: 'senior_9_4',
-          titleTh: 'แบบทดสอบบทที่ 9',
+          titleTh: 'แบบทดสอบบทที่ 10',
           type: LessonType.quiz,
           order: 4,
           estimatedMinutes: 3,
@@ -480,7 +480,7 @@ class SeniorNCOCurriculum {
         ),
         Lesson(
           id: 'senior_10_3',
-          titleTh: 'แบบทดสอบบทที่ 10',
+          titleTh: 'แบบทดสอบบทที่ 11',
           type: LessonType.quiz,
           order: 3,
           estimatedMinutes: 5,
@@ -520,7 +520,7 @@ class SeniorNCOCurriculum {
         ),
         Lesson(
           id: 'senior_11_3',
-          titleTh: 'แบบทดสอบบทที่ 11',
+          titleTh: 'แบบทดสอบบทที่ 12',
           type: LessonType.quiz,
           order: 3,
           estimatedMinutes: 8,
@@ -560,7 +560,7 @@ class SeniorNCOCurriculum {
         ),
         Lesson(
           id: 'senior_12_3',
-          titleTh: 'แบบทดสอบบทที่ 12',
+          titleTh: 'แบบทดสอบบทที่ 13',
           type: LessonType.quiz,
           order: 3,
           estimatedMinutes: 8,
@@ -599,7 +599,7 @@ class SeniorNCOCurriculum {
         ),
         Lesson(
           id: 'senior_13_3',
-          titleTh: 'แบบทดสอบบทที่ 13',
+          titleTh: 'แบบทดสอบบทที่ 14',
           type: LessonType.quiz,
           order: 3,
           estimatedMinutes: 5,
@@ -639,7 +639,7 @@ class SeniorNCOCurriculum {
         ),
         Lesson(
           id: 'senior_14_3',
-          titleTh: 'แบบทดสอบบทที่ 14',
+          titleTh: 'แบบทดสอบบทที่ 15',
           type: LessonType.quiz,
           order: 3,
           estimatedMinutes: 3,
@@ -678,7 +678,7 @@ class SeniorNCOCurriculum {
         ),
         Lesson(
           id: 'senior_15_3',
-          titleTh: 'แบบทดสอบบทที่ 15',
+          titleTh: 'แบบทดสอบบทที่ 16',
           type: LessonType.quiz,
           order: 3,
           estimatedMinutes: 6,
@@ -727,7 +727,7 @@ class SeniorNCOCurriculum {
         ),
         Lesson(
           id: 'senior_16_4',
-          titleTh: 'แบบทดสอบบทที่ 16',
+          titleTh: 'แบบทดสอบบทที่ 17',
           type: LessonType.quiz,
           order: 4,
           estimatedMinutes: 3,
@@ -776,7 +776,7 @@ class SeniorNCOCurriculum {
         ),
         Lesson(
           id: 'senior_17_4',
-          titleTh: 'แบบทดสอบบทที่ 17',
+          titleTh: 'แบบทดสอบบทที่ 18',
           type: LessonType.quiz,
           order: 4,
           estimatedMinutes: 3,
@@ -825,7 +825,7 @@ class SeniorNCOCurriculum {
         ),
         Lesson(
           id: 'senior_18_4',
-          titleTh: 'แบบทดสอบบทที่ 18',
+          titleTh: 'แบบทดสอบบทที่ 19',
           type: LessonType.quiz,
           order: 4,
           estimatedMinutes: 5,

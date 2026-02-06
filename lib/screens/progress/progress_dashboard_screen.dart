@@ -245,7 +245,6 @@ class _LearningStatsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final dailyGoals = progressService.dailyGoals;
     final completedLessons = _getTotalCompletedLessons(progressService);
-    final quizzesTaken = _getTotalQuizzesTaken(progressService);
     final flashcardsStudied = progressService.progress.flashcardProgress.length;
 
     return GridView.count(
@@ -292,13 +291,6 @@ class _LearningStatsGrid extends StatelessWidget {
     return total;
   }
 
-  int _getTotalQuizzesTaken(ProgressService service) {
-    int total = 0;
-    for (var module in service.progress.moduleProgress.values) {
-      total += module.quizScores.length;
-    }
-    return total;
-  }
 }
 
 class _StatCard extends StatelessWidget {
