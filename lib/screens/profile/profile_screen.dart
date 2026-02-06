@@ -7,6 +7,7 @@ import '../../models/curriculum_models.dart';
 import '../../models/progress_models.dart';
 import '../../services/auth_service.dart';
 import '../../services/progress_service.dart';
+import '../../services/user_role_service.dart';
 import '../progress/progress_dashboard_screen.dart';
 import '../auth/login_screen.dart';
 import '../teacher/teacher_dashboard_screen.dart';
@@ -286,10 +287,9 @@ class _ProfileScreenState extends State<ProfileScreen>
               const Divider(height: 1, indent: 56),
 
               // Dashboard ครู - แสดงเฉพาะครูเท่านั้น
-              FutureBuilder<bool>(
-                future: AuthService().isCurrentUserTeacher(),
-                builder: (context, snapshot) {
-                  if (snapshot.data == true) {
+              Consumer<UserRoleService>(
+                builder: (context, roleService, _) {
+                  if (roleService.isTeacher) {
                     return Column(
                       children: [
                         _SettingsTile(

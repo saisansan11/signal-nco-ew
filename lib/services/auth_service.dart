@@ -161,10 +161,22 @@ class AuthService {
         },
       });
     } else {
-      // Existing user - update last login
-      await userDoc.update({
+      // Existing user - update last login and check if role needs updating
+      final existingData = docSnapshot.data();
+      final currentRole = existingData?['role'] as String?;
+      final isTeacher = await isTeacherByEmail(user.email);
+
+      final updates = <String, dynamic>{
         'lastLoginAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      // Auto-upgrade to teacher if email is in whitelist but role is student
+      if (isTeacher && currentRole != 'teacher') {
+        updates['role'] = 'teacher';
+        debugPrint('AuthService: Upgraded ${user.email} to teacher role');
+      }
+
+      await userDoc.update(updates);
     }
   }
 
