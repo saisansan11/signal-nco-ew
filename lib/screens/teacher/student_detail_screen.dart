@@ -530,7 +530,7 @@ class _RecentActivityList extends StatelessWidget {
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('activities')
+          .collection('activity_log')
           .where('userId', isEqualTo: studentUid)
           .orderBy('timestamp', descending: true)
           .limit(5)
@@ -593,9 +593,9 @@ class _ActivityTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final type = activity['activityType'] ?? '';
+    final type = activity['type'] ?? activity['activityType'] ?? '';
     final timestamp = activity['timestamp'] as Timestamp?;
-    final detail = activity['detail'] ?? '';
+    final detail = activity['details'] ?? activity['detail'] ?? '';
 
     IconData icon;
     Color color;

@@ -137,8 +137,14 @@ class ProgressService extends ChangeNotifier {
         quizScoresMap.addAll(mp.quizScores);
       }
 
+      // Count stats for top-level fields (student_detail_screen reads these)
+      final quizPassedCount = quizScoresMap.values.where((s) => s >= 70).length;
+      final flashcardsCount = _progress.flashcardProgress.length;
+      final achievementsCount = _progress.unlockedAchievements.length;
+
       // Use set with merge to avoid errors when document/field doesn't exist
       await _firestore.collection('users').doc(user.uid).set({
+        // Nested progress (teacher_dashboard reads this)
         'progress': {
           'totalXP': _progress.totalXP,
           'currentStreak': _progress.currentStreak,
@@ -147,6 +153,16 @@ class ProgressService extends ChangeNotifier {
           'completedModules': completedModulesList,
           'quizScores': quizScoresMap,
         },
+        // Top-level fields (student_detail_screen reads these)
+        'uid': user.uid,
+        'totalXP': _progress.totalXP,
+        'xp': _progress.totalXP,
+        'currentStreak': _progress.currentStreak,
+        'lessonsCompleted': completedLessonsList.length,
+        'quizzesPassed': quizPassedCount,
+        'flashcardsStudied': flashcardsCount,
+        'achievementsUnlocked': achievementsCount,
+        'lastActiveDate': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
       debugPrint('Progress synced to Firestore: ${_progress.totalXP} XP');
