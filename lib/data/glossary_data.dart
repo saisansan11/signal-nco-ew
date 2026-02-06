@@ -383,6 +383,92 @@ class GlossaryData {
       definitionTh: 'การหลอกลวงเลียนแบบ - การส่งสัญญาณเลียนแบบการสื่อสารของข้าศึกเพื่อแทรกคำสั่งปลอม',
       category: EWCategory.ea,
     ),
+
+    // กรณีศึกษา (Case Study)
+    GlossaryTerm(
+      term: 'SEAD',
+      fullForm: 'Suppression of Enemy Air Defenses',
+      definitionTh: 'การระงับระบบป้องกันภัยทางอากาศของข้าศึก - ภารกิจทำลายหรือระงับระบบ SAM และเรดาร์ป้องกันภัยทางอากาศ มักใช้ EW ร่วมกับ ARM',
+      category: EWCategory.caseStudy,
+      relatedTerms: ['ARM', 'SAM', 'IADS'],
+    ),
+    GlossaryTerm(
+      term: 'IADS',
+      fullForm: 'Integrated Air Defense System',
+      definitionTh: 'ระบบป้องกันภัยทางอากาศแบบบูรณาการ - ระบบเครือข่ายเรดาร์ ขีปนาวุธ SAM และศูนย์บัญชาการที่เชื่อมต่อกันเพื่อป้องกันน่านฟ้า',
+      category: EWCategory.caseStudy,
+      relatedTerms: ['SEAD', 'SAM'],
+    ),
+    GlossaryTerm(
+      term: 'ARM',
+      fullForm: 'Anti-Radiation Missile',
+      definitionTh: 'อาวุธปล่อยนำวิถีต่อต้านเรดาร์ - ขีปนาวุธที่นำวิถีด้วยการตรวจจับคลื่นแม่เหล็กไฟฟ้าที่เรดาร์ข้าศึกแผ่ออกมา เช่น AGM-88 HARM',
+      category: EWCategory.caseStudy,
+      relatedTerms: ['SEAD', 'HARM'],
+    ),
+    GlossaryTerm(
+      term: 'EMS Superiority',
+      fullForm: 'Electromagnetic Spectrum Superiority',
+      definitionTh: 'ความเหนือกว่าทางสเปกตรัมแม่เหล็กไฟฟ้า - การครองความได้เปรียบในการใช้สเปกตรัม EMS เหนือข้าศึก เป็นเป้าหมายสำคัญของปฏิบัติการ EW',
+      category: EWCategory.caseStudy,
+    ),
+
+    // ระเบียบปฏิบัติ (Procedures)
+    GlossaryTerm(
+      term: 'SOP',
+      fullForm: 'Standard Operating Procedure',
+      definitionTh: 'ระเบียบปฏิบัติมาตรฐาน - ขั้นตอนการปฏิบัติที่กำหนดไว้อย่างเป็นระบบสำหรับการใช้งานอุปกรณ์ EW การรายงาน และการประสานงาน',
+      category: EWCategory.procedures,
+      relatedTerms: ['CEOI', 'ROE'],
+    ),
+    GlossaryTerm(
+      term: 'ROE',
+      fullForm: 'Rules of Engagement',
+      definitionTh: 'กฎการปะทะ - ระเบียบที่กำหนดว่าเมื่อใดและอย่างไรที่สามารถใช้ EW โจมตี (jamming) ได้ ต้องได้รับอนุญาตจากผู้มีอำนาจก่อนปฏิบัติการ',
+      category: EWCategory.procedures,
+      relatedTerms: ['SOP'],
+    ),
+    GlossaryTerm(
+      term: 'TEMPEST',
+      definitionTh: 'มาตรฐานการป้องกันการรั่วไหลของข้อมูลผ่านคลื่นแม่เหล็กไฟฟ้าที่แผ่จากอุปกรณ์อิเล็กทรอนิกส์ (Compromising Emanations) รวมถึงการชีลด์อุปกรณ์และห้องปฏิบัติการ',
+      category: EWCategory.procedures,
+    ),
+    GlossaryTerm(
+      term: 'COMSEC',
+      fullForm: 'Communications Security',
+      definitionTh: 'การรักษาความปลอดภัยการสื่อสาร - มาตรการป้องกันข้อมูลการสื่อสารจากการเข้าถึงโดยไม่ได้รับอนุญาต ครอบคลุม TRANSEC, Crypto Security, Physical Security',
+      category: EWCategory.procedures,
+      relatedTerms: ['TRANSEC', 'CEOI'],
+    ),
+
+    // เพิ่มเติม: ต่อต้านโดรน
+    GlossaryTerm(
+      term: 'C-UAS',
+      fullForm: 'Counter-Unmanned Aircraft System',
+      definitionTh: 'ระบบต่อต้านอากาศยานไร้คนขับ - ระบบที่ใช้ตรวจจับ ระบุ ติดตาม และทำลายล้างโดรน ทั้งแบบ kinetic และ non-kinetic (EW)',
+      category: EWCategory.antiDrone,
+      relatedTerms: ['UAS', 'RF Jamming'],
+    ),
+    GlossaryTerm(
+      term: 'RF Fingerprinting',
+      definitionTh: 'ลายเซ็น RF - เทคนิคการระบุชนิดโดรนจากลักษณะเฉพาะของสัญญาณ RF ที่ส่งออกมา เช่น คลื่นพาหะ โปรโตคอลควบคุม และรูปแบบการส่ง',
+      category: EWCategory.antiDrone,
+    ),
+
+    // เพิ่มเติม: GPS Warfare
+    GlossaryTerm(
+      term: 'INS',
+      fullForm: 'Inertial Navigation System',
+      definitionTh: 'ระบบนำทางเฉื่อย - ใช้ไจโรสโคปและ accelerometer คำนวณตำแหน่งจากการเปลี่ยนแปลงความเร็วและทิศทาง ทำงานได้โดยไม่ต้องพึ่งสัญญาณภายนอก',
+      category: EWCategory.gpsWarfare,
+      relatedTerms: ['GPS', 'GNSS'],
+    ),
+    GlossaryTerm(
+      term: 'Meaconing',
+      definitionTh: 'การหลอกลวงสัญญาณนำทาง - การรับสัญญาณนำทาง (เช่น GPS) แล้วส่งซ้ำ (re-broadcast) ด้วยกำลังสูงเพื่อหลอกเครื่องรับ คล้าย spoofing แต่ใช้สัญญาณจริง',
+      category: EWCategory.gpsWarfare,
+      relatedTerms: ['GPS Spoofing'],
+    ),
   ];
 
   /// ค้นหาคำศัพท์

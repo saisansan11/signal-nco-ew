@@ -747,6 +747,284 @@ class QuizData {
       category: EWCategory.ea,
       difficulty: DifficultyLevel.advanced,
     ),
+
+    // ================== กรณีศึกษา (Case Study) ==================
+    QuizQuestion(
+      id: 'case_001',
+      questionTh: 'ในสงครามอ่าวเปอร์เซีย (1991) กองทัพสหรัฐฯ ใช้ EW ในบทบาทใดเป็นหลัก?',
+      optionsTh: [
+        'รบกวนระบบป้องกันภัยทางอากาศของอิรัก',
+        'ดักฟังการสื่อสารทางเรือ',
+        'ป้องกันระบบ GPS ของตนเอง',
+        'ตรวจจับโดรนลาดตระเวน'
+      ],
+      correctIndex: 0,
+      explanationTh: 'ในสงครามอ่าวเปอร์เซีย สหรัฐฯ ใช้ EW อย่างเข้มข้นในการรบกวน (jamming) ระบบเรดาร์ป้องกันภัยทางอากาศของอิรัก ทำให้ IADS ของอิรักเป็นอัมพาต',
+      category: EWCategory.caseStudy,
+      difficulty: DifficultyLevel.intermediate,
+    ),
+    QuizQuestion(
+      id: 'case_002',
+      questionTh: 'ยุทธการ Bekaa Valley (1982) อิสราเอลใช้ยุทธวิธี EW ใดในการทำลายระบบ SAM ของซีเรีย?',
+      optionsTh: [
+        'ใช้โดรนล่อให้เรดาร์เปิดทำงาน แล้วส่งอาวุธต่อต้านเรดาร์เข้าโจมตี',
+        'ใช้การรบกวนแบบ barrage ทุกความถี่พร้อมกัน',
+        'ส่งเครื่องบินบินต่ำเลี่ยงเรดาร์',
+        'ใช้หน่วยรบพิเศษทำลายสถานีเรดาร์'
+      ],
+      correctIndex: 0,
+      explanationTh: 'อิสราเอลส่ง UAV/โดรนล่อให้ซีเรียเปิดเรดาร์ SAM จากนั้นใช้ SEAD (Suppression of Enemy Air Defenses) ส่ง ARM (Anti-Radiation Missile) เข้าโจมตี ทำลายได้ 19 ฐาน SAM ภายในไม่กี่ชั่วโมง',
+      category: EWCategory.caseStudy,
+      difficulty: DifficultyLevel.intermediate,
+    ),
+    QuizQuestion(
+      id: 'case_003',
+      questionTh: 'ในความขัดแย้ง Russia-Ukraine สงคราม EW มีบทบาทสำคัญในด้านใดมากที่สุด?',
+      optionsTh: [
+        'การรบกวนเรดาร์ขนาดใหญ่',
+        'การต่อต้านโดรนและการรบกวน GPS',
+        'การดักฟังการสื่อสารทางเรือ',
+        'การป้องกันดาวเทียม'
+      ],
+      correctIndex: 1,
+      explanationTh: 'สงคราม Russia-Ukraine มี EW เป็นส่วนสำคัญโดยเฉพาะการต่อต้าน UAS/โดรน (Counter-UAS) และการรบกวน GPS/GNSS ทั้งสองฝ่ายใช้ระบบ EW อย่างกว้างขวาง',
+      category: EWCategory.caseStudy,
+      difficulty: DifficultyLevel.intermediate,
+    ),
+    QuizQuestion(
+      id: 'case_004',
+      questionTh: 'บทเรียนสำคัญจากกรณีศึกษา EW คือข้อใด?',
+      optionsTh: [
+        'ใช้งบประมาณมากที่สุดจะชนะ',
+        'ฝ่ายที่ควบคุมสเปกตรัมแม่เหล็กไฟฟ้าได้ มีข้อได้เปรียบทางยุทธวิธี',
+        'EW ใช้ได้เฉพาะในสงครามขนาดใหญ่',
+        'เทคโนโลยีเก่ามีประสิทธิภาพเท่ากับเทคโนโลยีใหม่เสมอ'
+      ],
+      correctIndex: 1,
+      explanationTh: 'บทเรียนสำคัญจาก EW คือ "ใครควบคุมสเปกตรัม ใครได้เปรียบ" - Electromagnetic Spectrum Superiority เป็นปัจจัยชี้ขาดในสนามรบยุคใหม่',
+      category: EWCategory.caseStudy,
+      difficulty: DifficultyLevel.beginner,
+    ),
+    QuizQuestion(
+      id: 'case_005',
+      questionTh: 'SEAD (Suppression of Enemy Air Defenses) คืออะไร?',
+      optionsTh: [
+        'การสนับสนุนทางอากาศ',
+        'การระงับระบบป้องกันภัยทางอากาศของข้าศึก',
+        'การป้องกันฐานทัพอากาศ',
+        'การลาดตระเวนทางอากาศ'
+      ],
+      correctIndex: 1,
+      explanationTh: 'SEAD = Suppression of Enemy Air Defenses คือภารกิจระงับหรือทำลายระบบป้องกันภัยทางอากาศของข้าศึก ใช้ EW ร่วมกับ ARM (Anti-Radiation Missile)',
+      category: EWCategory.caseStudy,
+      difficulty: DifficultyLevel.beginner,
+    ),
+
+    // ================== ระเบียบปฏิบัติ (Procedures) ==================
+    QuizQuestion(
+      id: 'proc_001',
+      questionTh: 'ก่อนใช้งานอุปกรณ์ EW ขั้นตอนแรกที่ต้องทำคืออะไร?',
+      optionsTh: [
+        'เปิดเครื่องทันที',
+        'ตรวจสอบความพร้อมของอุปกรณ์ (Pre-Operation Check)',
+        'รายงานผู้บังคับบัญชา',
+        'บันทึกข้อมูลสัญญาณ'
+      ],
+      correctIndex: 1,
+      explanationTh: 'ระเบียบปฏิบัติกำหนดให้ทำ Pre-Operation Check ก่อนใช้งานเสมอ ได้แก่ ตรวจสอบแหล่งจ่ายไฟ เสาอากาศ สายเคเบิล และซอฟต์แวร์',
+      category: EWCategory.procedures,
+      difficulty: DifficultyLevel.beginner,
+    ),
+    QuizQuestion(
+      id: 'proc_002',
+      questionTh: 'เมื่อตรวจพบสัญญาณที่น่าสงสัย ขั้นตอนแรกตาม SOP คืออะไร?',
+      optionsTh: [
+        'รบกวนสัญญาณทันที',
+        'บันทึกพารามิเตอร์สัญญาณ (ความถี่ กำลัง ประเภท) แล้วรายงาน',
+        'ปิดเครื่องเพื่อความปลอดภัย',
+        'เปลี่ยนความถี่การทำงาน'
+      ],
+      correctIndex: 1,
+      explanationTh: 'SOP กำหนดให้บันทึกพารามิเตอร์สัญญาณก่อน (ความถี่ กำลัง ทิศทาง ประเภทการมอดูเลต เวลา) แล้วรายงานตามสายการบังคับบัญชา ห้ามรบกวนโดยไม่ได้รับอนุญาต',
+      category: EWCategory.procedures,
+      difficulty: DifficultyLevel.beginner,
+    ),
+    QuizQuestion(
+      id: 'proc_003',
+      questionTh: 'การจัดการ CEOI (คำสั่งปฏิบัติการสื่อสาร) ข้อใดถูกต้อง?',
+      optionsTh: [
+        'แจกจ่ายให้ทุกคนในหน่วย',
+        'เก็บรักษาตามชั้นความลับ เปลี่ยนตามกำหนดเวลา',
+        'ใช้ได้ตลอดไปไม่ต้องเปลี่ยน',
+        'ส่งผ่านวิทยุในกรณีฉุกเฉิน'
+      ],
+      correctIndex: 1,
+      explanationTh: 'CEOI เป็นเอกสารลับที่ต้องเก็บรักษาตามชั้นความลับ เปลี่ยนตามรอบเวลาที่กำหนด (เช่น ทุก 24 ชม.) และทำลายเมื่อหมดอายุ',
+      category: EWCategory.procedures,
+      difficulty: DifficultyLevel.intermediate,
+    ),
+    QuizQuestion(
+      id: 'proc_004',
+      questionTh: 'ในการรายงานผลการดักรับสัญญาณ (SIGINT Report) ต้องมีข้อมูลใดบ้าง?',
+      optionsTh: [
+        'เวลา ความถี่ ทิศทาง ประเภทสัญญาณ',
+        'ชื่อผู้ปฏิบัติงาน หมายเลขเครื่อง',
+        'สภาพอากาศ อุณหภูมิ',
+        'จำนวนเครื่องที่มี ยอดกำลังพล'
+      ],
+      correctIndex: 0,
+      explanationTh: 'รายงาน SIGINT ต้องมี: DTG (วันเวลา), ความถี่, ทิศทาง/มุมเอลิเวชัน, ประเภทสัญญาณ/การมอดูเลต, กำลังส่ง และตำแหน่ง (ถ้าระบุได้)',
+      category: EWCategory.procedures,
+      difficulty: DifficultyLevel.intermediate,
+    ),
+    QuizQuestion(
+      id: 'proc_005',
+      questionTh: 'ระเบียบปฏิบัติด้านความปลอดภัย TEMPEST หมายถึงอะไร?',
+      optionsTh: [
+        'การป้องกันภัยธรรมชาติ',
+        'การป้องกันการรั่วไหลของข้อมูลผ่านคลื่นแม่เหล็กไฟฟ้า',
+        'การซ่อมบำรุงอุปกรณ์',
+        'การฝึกอบรมกำลังพล'
+      ],
+      correctIndex: 1,
+      explanationTh: 'TEMPEST คือมาตรฐานการป้องกันการรั่วไหลของข้อมูลลับผ่านการแผ่คลื่นแม่เหล็กไฟฟ้าจากอุปกรณ์อิเล็กทรอนิกส์ (Compromising Emanations)',
+      category: EWCategory.procedures,
+      difficulty: DifficultyLevel.advanced,
+    ),
+
+    // ================== เพิ่มเติม: ต่อต้านโดรน ==================
+    QuizQuestion(
+      id: 'drone_003',
+      questionTh: 'ระบบ Counter-UAS แบบ RF Jamming ทำงานอย่างไร?',
+      optionsTh: [
+        'ยิงโดรนตก',
+        'รบกวนสัญญาณควบคุมและ GPS ของโดรน',
+        'ใช้เลเซอร์เผาโดรน',
+        'ดักจับโดรนด้วยตาข่าย'
+      ],
+      correctIndex: 1,
+      explanationTh: 'Counter-UAS แบบ RF Jamming ทำงานโดยส่งสัญญาณรบกวนที่ความถี่ควบคุม (เช่น 2.4GHz, 5.8GHz) และ GPS ทำให้โดรนขาดการสั่งการและตำแหน่ง โดรนจะลงจอดหรือกลับจุดเริ่มต้น',
+      category: EWCategory.antiDrone,
+      difficulty: DifficultyLevel.intermediate,
+    ),
+    QuizQuestion(
+      id: 'drone_004',
+      questionTh: 'เทคนิค GPS Spoofing สำหรับ Counter-UAS คืออะไร?',
+      optionsTh: [
+        'ส่งสัญญาณ GPS ปลอมให้โดรนบินไปตำแหน่งที่ต้องการ',
+        'ตัดสัญญาณ GPS ทั้งหมดในพื้นที่',
+        'ส่งคำสั่งควบคุมโดรนโดยตรง',
+        'ใช้เรดาร์ติดตามโดรน'
+      ],
+      correctIndex: 0,
+      explanationTh: 'GPS Spoofing คือการส่งสัญญาณ GPS ปลอมที่แรงกว่าสัญญาณจริง ทำให้โดรนเข้าใจตำแหน่งผิด สามารถบังคับให้โดรนบินไปลงจอดในพื้นที่ที่กำหนดได้',
+      category: EWCategory.antiDrone,
+      difficulty: DifficultyLevel.advanced,
+    ),
+    QuizQuestion(
+      id: 'drone_005',
+      questionTh: 'การตรวจจับโดรนด้วย RF Detection มีข้อดีอย่างไรเทียบกับเรดาร์?',
+      optionsTh: [
+        'ระยะตรวจจับไกลกว่า',
+        'สามารถจำแนกชนิดโดรนจากลายเซ็นสัญญาณควบคุม',
+        'ใช้พลังงานน้อยกว่า',
+        'ทำงานได้ในทุกสภาพอากาศ'
+      ],
+      correctIndex: 1,
+      explanationTh: 'RF Detection สามารถดักรับและวิเคราะห์สัญญาณควบคุมโดรน (command link) ทำให้จำแนกชนิดและรุ่นของโดรนได้จากลายเซ็นสัญญาณ ซึ่งเรดาร์ทำได้ยากเนื่องจาก RCS ของโดรนเล็กมาก',
+      category: EWCategory.antiDrone,
+      difficulty: DifficultyLevel.intermediate,
+    ),
+
+    // ================== เพิ่มเติม: GPS Warfare ==================
+    QuizQuestion(
+      id: 'gps_004',
+      questionTh: 'ความแตกต่างระหว่าง GPS Jamming กับ GPS Spoofing คืออะไร?',
+      optionsTh: [
+        'Jamming ส่งสัญญาณปลอม, Spoofing ตัดสัญญาณ',
+        'Jamming ตัดสัญญาณด้วยสัญญาณรบกวน, Spoofing ส่งสัญญาณ GPS ปลอม',
+        'ทั้งสองอย่างเหมือนกัน',
+        'Jamming ใช้กับดาวเทียม, Spoofing ใช้กับภาคพื้น'
+      ],
+      correctIndex: 1,
+      explanationTh: 'GPS Jamming คือการส่งสัญญาณรบกวนเพื่อกลบสัญญาณ GPS จริง (denial) ส่วน GPS Spoofing คือการส่งสัญญาณ GPS ปลอมที่ดูเหมือนจริงเพื่อหลอกให้เครื่องรับแสดงตำแหน่งผิด (deception)',
+      category: EWCategory.gpsWarfare,
+      difficulty: DifficultyLevel.intermediate,
+    ),
+    QuizQuestion(
+      id: 'gps_005',
+      questionTh: 'INS (Inertial Navigation System) ช่วยแก้ปัญหา GPS Denial ได้อย่างไร?',
+      optionsTh: [
+        'ส่งสัญญาณ GPS เอง',
+        'ใช้เซ็นเซอร์ความเฉื่อย (gyro+accelerometer) นำทางโดยไม่ต้องพึ่งสัญญาณภายนอก',
+        'เชื่อมต่อกับดาวเทียมสำรอง',
+        'ใช้สัญญาณโทรศัพท์มือถือแทน'
+      ],
+      correctIndex: 1,
+      explanationTh: 'INS ใช้ไจโรสโคปและ accelerometer วัดการเปลี่ยนแปลงความเร็วและทิศทาง คำนวณตำแหน่งโดยไม่ต้องพึ่งสัญญาณภายนอก แต่มีค่าคลาดเคลื่อนสะสม (drift) ตามเวลา จึงมักใช้ร่วมกับ GPS เป็น GPS/INS',
+      category: EWCategory.gpsWarfare,
+      difficulty: DifficultyLevel.intermediate,
+    ),
+
+    // ================== เพิ่มเติม: สเปกตรัม ==================
+    QuizQuestion(
+      id: 'spec_004',
+      questionTh: 'Waterfall Display แสดงข้อมูลอะไร?',
+      optionsTh: [
+        'ความถี่ vs กำลังส่ง ตามเวลา',
+        'ตำแหน่ง vs ระยะทาง',
+        'อุณหภูมิ vs ความชื้น',
+        'มุม vs ระยะ'
+      ],
+      correctIndex: 0,
+      explanationTh: 'Waterfall Display แสดงข้อมูลสเปกตรัมในรูปแบบ 3 มิติ: แกน X = ความถี่, แกน Y = เวลา (เลื่อนลง), สี = กำลังสัญญาณ ช่วยให้เห็นการเปลี่ยนแปลงของสัญญาณตามเวลา',
+      category: EWCategory.spectrum,
+      difficulty: DifficultyLevel.beginner,
+    ),
+    QuizQuestion(
+      id: 'spec_005',
+      questionTh: 'SNR (Signal-to-Noise Ratio) ที่ดี ต้องมีค่าเป็นอย่างไร?',
+      optionsTh: [
+        'ค่าสูง (สัญญาณแรงกว่า noise มาก)',
+        'ค่าต่ำ (noise แรงกว่าสัญญาณ)',
+        'ค่าเป็น 0',
+        'ค่าเป็นลบเสมอ'
+      ],
+      correctIndex: 0,
+      explanationTh: 'SNR ที่ดีต้องมีค่าสูง หมายถึงสัญญาณที่ต้องการแรงกว่า noise/สัญญาณรบกวนมาก ยิ่ง SNR สูง ยิ่งตรวจจับและวิเคราะห์สัญญาณได้ง่าย',
+      category: EWCategory.spectrum,
+      difficulty: DifficultyLevel.beginner,
+    ),
+
+    // ================== เพิ่มเติม: วิทยุสื่อสาร ==================
+    QuizQuestion(
+      id: 'radio_003',
+      questionTh: 'TRANSEC (Transmission Security) คืออะไร?',
+      optionsTh: [
+        'การรักษาความปลอดภัยเนื้อหาข้อความ',
+        'การรักษาความปลอดภัยของการส่งสัญญาณจากการดักรับและการรบกวน',
+        'การเข้ารหัสข้อมูล',
+        'การป้องกันไวรัสคอมพิวเตอร์'
+      ],
+      correctIndex: 1,
+      explanationTh: 'TRANSEC = Transmission Security คือมาตรการป้องกันการส่งสัญญาณจากการดักรับ วิเคราะห์ทิศทาง และการรบกวน รวมถึงเทคนิค FHSS, DSSS, และ burst transmission',
+      category: EWCategory.radio,
+      difficulty: DifficultyLevel.intermediate,
+    ),
+    QuizQuestion(
+      id: 'radio_004',
+      questionTh: 'LPI (Low Probability of Intercept) Communications มีลักษณะอย่างไร?',
+      optionsTh: [
+        'ส่งสัญญาณกำลังสูงมากให้ได้ยินชัด',
+        'ส่งสัญญาณกำลังต่ำ กระจายสเปกตรัมกว้าง ยากต่อการดักรับ',
+        'ส่งสัญญาณแบบ AM ธรรมดา',
+        'ส่งสัญญาณเฉพาะเวลากลางคืน'
+      ],
+      correctIndex: 1,
+      explanationTh: 'LPI Communications ออกแบบให้ยากต่อการดักรับ โดยใช้กำลังส่งต่ำ กระจายสเปกตรัมกว้าง (spread spectrum) เสาอากาศกำหนดทิศทาง และ burst transmission ส่งข้อมูลเร็ว',
+      category: EWCategory.radio,
+      difficulty: DifficultyLevel.advanced,
+    ),
   ];
 
   /// กรองคำถามตามหมวดหมู่
