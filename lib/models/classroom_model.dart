@@ -1,6 +1,8 @@
 // Classroom Model
 // Model for virtual classrooms created by teachers
 
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Virtual classroom
@@ -96,10 +98,13 @@ class Classroom {
     );
   }
 
-  /// Generate a random 6-digit classroom code
+  /// Generate a cryptographically secure 6-character classroom code
+  /// Uses uppercase letters + digits, excluding ambiguous chars (O/0/I/1/L)
   static String generateCode() {
-    final random = DateTime.now().millisecondsSinceEpoch;
-    return (random % 900000 + 100000).toString();
+    const charset = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    final random = Random.secure();
+    return List.generate(6, (_) => charset[random.nextInt(charset.length)])
+        .join();
   }
 }
 

@@ -7,10 +7,12 @@ import 'package:provider/provider.dart';
 
 import '../../app/constants.dart';
 import '../../services/user_role_service.dart';
+import '../../services/security_service.dart';
 import '../onboarding/level_selection_screen.dart';
 import '../home/home_screen.dart';
 import '../home/teacher_home_screen.dart';
 import '../auth/login_screen.dart';
+import '../security/pin_lock_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -124,6 +126,31 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
+    // Check if PIN lock is enabled
+    final security = SecurityService.instance;
+    if (security.isAppLocked) {
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                PinLockScreen(
+              mode: PinScreenMode.verify,
+              onUnlocked: () => _navigateToHome(),
+            ),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 500),
+          ),
+        );
+      }
+      return;
+    }
+
+    await _navigateToHome();
+  }
+
+  Future<void> _navigateToHome() async {
     // User is logged in - check role and navigate accordingly
     final roleService = Provider.of<UserRoleService>(context, listen: false);
     await roleService.checkAndSetRole();

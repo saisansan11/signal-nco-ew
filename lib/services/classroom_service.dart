@@ -3,6 +3,8 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/classroom_model.dart';
+import 'input_validator.dart';
+import 'rate_limiter.dart';
 
 class ClassroomService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -15,8 +17,21 @@ class ClassroomService {
 
   // ============== Classroom CRUD ==============
 
-  /// Create a new classroom
+  final RateLimiter _rateLimiter = RateLimiter.instance;
+
+  /// Create a new classroom (with input validation and rate limiting)
   Future<String> createClassroom(Classroom classroom) async {
+    // Rate limiting
+    if (!_rateLimiter.tryPerform('firestore_write')) {
+      throw Exception('คำขอมากเกินไป กรุณารอสักครู่');
+    }
+
+    // Validate classroom name
+    final nameValidation = InputValidator.validateClassroomName(classroom.nameTh);
+    if (!nameValidation.isValid) {
+      throw Exception(nameValidation.errorMessage);
+    }
+
     // Generate unique code
     String code = Classroom.generateCode();
 
@@ -107,9 +122,21 @@ class ClassroomService {
 
   // ============== Student Management ==============
 
-  /// Join a classroom using code
+  /// Join a classroom using code (with validation and rate limiting)
   Future<bool> joinClassroom(String code, String studentUid) async {
-    final classroom = await getClassroomByCode(code);
+    // Rate limiting
+    if (!_rateLimiter.tryPerform('classroom_join')) {
+      throw Exception('คำขอมากเกินไป กรุณารอสักครู่');
+    }
+
+    // Validate code format
+    final sanitizedCode = InputValidator.sanitize(code).toUpperCase();
+    final codeValidation = InputValidator.validateClassroomCode(sanitizedCode);
+    if (!codeValidation.isValid) {
+      throw Exception(codeValidation.errorMessage);
+    }
+
+    final classroom = await getClassroomByCode(sanitizedCode);
     if (classroom == null || !classroom.isActive) return false;
 
     if (classroom.studentUids.contains(studentUid)) return true; // Already joined
@@ -156,8 +183,23 @@ class ClassroomService {
 
   // ============== Assignment CRUD ==============
 
-  /// Create an assignment
+  /// Create an assignment (with validation and rate limiting)
   Future<String> createAssignment(Assignment assignment) async {
+    if (!_rateLimiter.tryPerform('firestore_write')) {
+      throw Exception('คำขอมากเกินไป กรุณารอสักครู่');
+    }
+
+    // Validate assignment title
+    final titleValidation = InputValidator.validateTextInput(
+      assignment.titleTh,
+      fieldName: 'ชื่องาน',
+      maxLength: 200,
+      minLength: 2,
+    );
+    if (!titleValidation.isValid) {
+      throw Exception(titleValidation.errorMessage);
+    }
+
     final docRef = await _assignmentsRef.add(assignment.toFirestore());
     return docRef.id;
   }

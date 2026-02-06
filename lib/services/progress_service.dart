@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/curriculum_models.dart';
 import '../models/progress_models.dart';
+import 'encrypted_storage_service.dart';
 
 /// Progress tracking service with persistence
 class ProgressService extends ChangeNotifier {
@@ -11,8 +11,10 @@ class ProgressService extends ChangeNotifier {
 
   ProgressService._();
 
-  SharedPreferences? _prefs;
+  late EncryptedStorageService _storage;
   UserProgress _progress = UserProgress();
+
+  static const String _progressKey = 'user_progress';
 
   UserProgress get progress => _progress;
   NCOLevel get currentLevel => _progress.currentLevel;
@@ -23,13 +25,17 @@ class ProgressService extends ChangeNotifier {
 
   /// Initialize the service
   static Future<void> init() async {
-    instance._prefs = await SharedPreferences.getInstance();
+    instance._storage = EncryptedStorageService.instance;
+
+    // Migrate legacy plaintext data to encrypted format
+    await instance._storage.migrateToEncrypted(_progressKey);
+
     await instance._loadProgress();
   }
 
   /// Load progress from storage
   Future<void> _loadProgress() async {
-    final json = _prefs?.getString('user_progress');
+    final json = _storage.readEncrypted(_progressKey);
     if (json != null) {
       try {
         final data = jsonDecode(json) as Map<String, dynamic>;
@@ -90,7 +96,7 @@ class ProgressService extends ChangeNotifier {
         (key, value) => MapEntry(key, value.toJson()),
       ),
     };
-    await _prefs?.setString('user_progress', jsonEncode(data));
+    await _storage.writeEncrypted(_progressKey, jsonEncode(data));
   }
 
   /// Set NCO level
@@ -236,7 +242,7 @@ class ProgressService extends ChangeNotifier {
   /// Reset all progress (for testing)
   Future<void> resetProgress() async {
     _progress = UserProgress();
-    await _prefs?.remove('user_progress');
+    await _storage.remove(_progressKey);
     notifyListeners();
   }
 }

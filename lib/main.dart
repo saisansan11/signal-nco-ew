@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 import 'app/constants.dart';
+import 'services/encrypted_storage_service.dart';
 import 'services/progress_service.dart';
+import 'services/security_service.dart';
 import 'services/user_role_service.dart';
 import 'screens/splash/splash_screen.dart';
 import 'firebase_options.dart';
@@ -18,7 +20,11 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Initialize services
+  // Initialize security & encrypted storage first
+  await EncryptedStorageService.init();
+  await SecurityService.init();
+
+  // Initialize services (now uses encrypted storage)
   await ProgressService.init();
 
   // Set system UI
@@ -48,13 +54,14 @@ class SignalNCOEWApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: ProgressService.instance),
+        ChangeNotifierProvider.value(value: SecurityService.instance),
         ChangeNotifierProvider(create: (_) => UserRoleService()),
       ],
       child: MaterialApp(
         title: AppStrings.appNameTh,
         debugShowCheckedModeBanner: false,
         theme: _buildTheme(),
-        home: const SplashScreen(),
+        home: const _SessionTimeoutWrapper(child: SplashScreen()),
       ),
     );
   }
@@ -149,6 +156,51 @@ class SignalNCOEWApp extends StatelessWidget {
         selectedItemColor: AppColors.primary,
         unselectedItemColor: AppColors.textMuted,
       ),
+    );
+  }
+}
+
+/// Wraps the app to detect user activity for session timeout
+class _SessionTimeoutWrapper extends StatefulWidget {
+  final Widget child;
+
+  const _SessionTimeoutWrapper({required this.child});
+
+  @override
+  State<_SessionTimeoutWrapper> createState() => _SessionTimeoutWrapperState();
+}
+
+class _SessionTimeoutWrapperState extends State<_SessionTimeoutWrapper>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final security = SecurityService.instance;
+    if (state == AppLifecycleState.paused) {
+      security.onAppPaused();
+    } else if (state == AppLifecycleState.resumed) {
+      security.onAppResumed();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => SecurityService.instance.recordActivity(),
+      onPanDown: (_) => SecurityService.instance.recordActivity(),
+      child: widget.child,
     );
   }
 }

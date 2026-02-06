@@ -10,6 +10,7 @@ import '../../services/progress_service.dart';
 import '../progress/progress_dashboard_screen.dart';
 import '../auth/login_screen.dart';
 import '../teacher/teacher_dashboard_screen.dart';
+import '../security/security_settings_screen.dart';
 
 /// Profile Screen - User-friendly for all ages
 /// Features: Greeting, Daily Goals, Achievements, Quick Actions, Settings
@@ -325,6 +326,20 @@ class _ProfileScreenState extends State<ProfileScreen>
                 title: 'รีเซ็ตความก้าวหน้า',
                 subtitle: 'เริ่มต้นใหม่ทั้งหมด',
                 onTap: () => _showResetDialog(context),
+              ),
+              const Divider(height: 1, indent: 56),
+
+              // ความปลอดภัย
+              _SettingsTile(
+                icon: Icons.security,
+                title: 'ความปลอดภัย',
+                subtitle: 'PIN, ไบโอเมตริก, เข้ารหัสข้อมูล',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SecuritySettingsScreen(),
+                  ),
+                ),
               ),
               const Divider(height: 1, indent: 56),
 

@@ -2,7 +2,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -11,8 +11,13 @@ class AuthService {
     scopes: ['email', 'profile'],
   );
 
-  // รายชื่อ Email ครูผู้สอน
-  static const List<String> _teacherEmails = [
+  // Cached teacher whitelist from Firestore
+  List<String>? _cachedTeacherEmails;
+  DateTime? _teacherCacheTime;
+  static const Duration _teacherCacheTTL = Duration(minutes: 30);
+
+  // Fallback whitelist (used only if Firestore config not yet set up)
+  static const List<String> _fallbackTeacherEmails = [
     'wasan.t@signalschool.ac.th',
   ];
 
@@ -22,10 +27,43 @@ class AuthService {
   // Stream of auth changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
+  // โหลดรายชื่อครูจาก Firestore config collection
+  Future<List<String>> _getTeacherEmails() async {
+    // Return cache if still valid
+    if (_cachedTeacherEmails != null &&
+        _teacherCacheTime != null &&
+        DateTime.now().difference(_teacherCacheTime!) < _teacherCacheTTL) {
+      return _cachedTeacherEmails!;
+    }
+
+    try {
+      final doc = await _firestore
+          .collection('config')
+          .doc('teacher_whitelist')
+          .get();
+
+      if (doc.exists) {
+        final data = doc.data();
+        final emails = (data?['emails'] as List<dynamic>?)
+                ?.map((e) => e.toString().toLowerCase())
+                .toList() ??
+            _fallbackTeacherEmails;
+        _cachedTeacherEmails = emails;
+        _teacherCacheTime = DateTime.now();
+        return emails;
+      }
+    } catch (e) {
+      // Firestore config not available, use fallback
+    }
+
+    return _fallbackTeacherEmails;
+  }
+
   // ตรวจสอบว่าเป็นครูหรือไม่ (จาก email)
-  bool isTeacherByEmail(String? email) {
+  Future<bool> isTeacherByEmail(String? email) async {
     if (email == null) return false;
-    return _teacherEmails.contains(email.toLowerCase());
+    final teacherEmails = await _getTeacherEmails();
+    return teacherEmails.contains(email.toLowerCase());
   }
 
   // ตรวจสอบว่า user ปัจจุบันเป็นครูหรือไม่
@@ -33,10 +71,10 @@ class AuthService {
     final user = currentUser;
     if (user == null) return false;
 
-    // ตรวจจาก email whitelist ก่อน
-    if (isTeacherByEmail(user.email)) return true;
+    // ตรวจจาก email whitelist ก่อน (จาก Firestore config)
+    if (await isTeacherByEmail(user.email)) return true;
 
-    // ถ้าไม่อยู่ใน whitelist ให้ตรวจจาก Firestore
+    // ถ้าไม่อยู่ใน whitelist ให้ตรวจจาก Firestore user document
     final doc = await _firestore.collection('users').doc(user.uid).get();
     final data = doc.data();
     return data?['role'] == 'teacher';
@@ -88,7 +126,7 @@ class AuthService {
         return userCredential;
       }
     } catch (e) {
-      print('Error signing in with Google: $e');
+      debugPrint('Error signing in with Google: $e');
       rethrow;
     }
   }
@@ -103,7 +141,7 @@ class AuthService {
     if (!docSnapshot.exists) {
       // New user - create document
       // ตรวจสอบว่าเป็นครูหรือไม่จาก email
-      final isTeacher = isTeacherByEmail(user.email);
+      final isTeacher = await isTeacherByEmail(user.email);
 
       await userDoc.set({
         'uid': user.uid,
@@ -138,7 +176,7 @@ class AuthService {
       }
       await _auth.signOut();
     } catch (e) {
-      print('Error signing out: $e');
+      debugPrint('Error signing out: $e');
       rethrow;
     }
   }

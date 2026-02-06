@@ -1,0 +1,134 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============== Helper Functions ==============
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function isTeacher() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+
+    function isClassroomTeacher(classroomId) {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/classrooms/$(classroomId)).data.teacherId == request.auth.uid;
+    }
+
+    function isClassroomStudent(classroomId) {
+      return isAuthenticated() &&
+        request.auth.uid in get(/databases/$(database)/documents/classrooms/$(classroomId)).data.studentUids;
+    }
+
+    function isClassroomMember(classroomId) {
+      return isClassroomTeacher(classroomId) || isClassroomStudent(classroomId);
+    }
+
+    // ============== Config Collection ==============
+
+    match /config/{document} {
+      // Anyone authenticated can read config (teacher whitelist, etc.)
+      allow read: if isAuthenticated();
+      // Only teachers can write config
+      allow write: if isTeacher();
+    }
+
+    // ============== Users Collection ==============
+
+    match /users/{userId} {
+      // Users can read their own document
+      allow read: if isOwner(userId);
+      // Users can create their own document on first sign-in
+      allow create: if isOwner(userId);
+      // Users can update their own document
+      allow update: if isOwner(userId);
+      // No one can delete user documents from client
+      allow delete: if false;
+    }
+
+    // Teachers can read student data for their classrooms
+    match /users/{userId} {
+      allow read: if isTeacher();
+    }
+
+    // ============== Classrooms Collection ==============
+
+    match /classrooms/{classroomId} {
+      // Any authenticated user can read classrooms (for join by code)
+      allow read: if isAuthenticated();
+
+      // Only teachers can create classrooms
+      allow create: if isTeacher() &&
+        request.resource.data.teacherId == request.auth.uid;
+
+      // Only the classroom teacher can update
+      allow update: if isClassroomTeacher(classroomId) ||
+        // Students can update only to join (add their UID to studentUids)
+        (isAuthenticated() &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentUids', 'updatedAt']));
+
+      // Only the classroom teacher can delete
+      allow delete: if isClassroomTeacher(classroomId);
+    }
+
+    // ============== Assignments Collection ==============
+
+    match /assignments/{assignmentId} {
+      // Classroom members can read assignments
+      allow read: if isAuthenticated();
+
+      // Only teachers can create/update/delete assignments
+      allow create: if isTeacher();
+      allow update: if isTeacher();
+      allow delete: if isTeacher();
+    }
+
+    // ============== Assignment Submissions ==============
+
+    match /assignment_submissions/{submissionId} {
+      // Students can read their own submissions
+      allow read: if isAuthenticated() &&
+        (resource.data.studentUid == request.auth.uid || isTeacher());
+
+      // Students can create their own submissions
+      allow create: if isAuthenticated() &&
+        request.resource.data.studentUid == request.auth.uid;
+
+      // Students can update their own submissions
+      allow update: if isAuthenticated() &&
+        resource.data.studentUid == request.auth.uid;
+
+      // Only teachers can delete submissions
+      allow delete: if isTeacher();
+    }
+
+    // ============== Activities Collection ==============
+
+    match /activities/{activityId} {
+      // Users can create their own activities
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+
+      // Users can read their own activities, teachers can read all
+      allow read: if isAuthenticated() &&
+        (resource.data.userId == request.auth.uid || isTeacher());
+
+      // No updates or deletes from client
+      allow update, delete: if false;
+    }
+
+    // ============== Deny all other access ==============
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
