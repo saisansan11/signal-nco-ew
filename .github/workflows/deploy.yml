@@ -1,21 +1,12 @@
-name: Deploy Signal NCO EW to GitHub Pages
+name: Deploy Signal NCO EW to Firebase Hosting
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,33 +17,16 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Check Flutter version
-        run: flutter --version
-
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Analyze code
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings || true
-
       - name: Build web
-        run: flutter build web --release --base-href "/signal-nco-ew/"
+        run: flutter build web --release
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: 'build/web'
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Deploy to Firebase Hosting
+        run: firebase deploy --only hosting --project signal-nco-ew
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}

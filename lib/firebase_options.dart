@@ -41,26 +41,24 @@ class DefaultFirebaseOptions {
     measurementId: 'G-EECS7R3JHX',
   );
 
-  // Android config - same project, will be auto-configured when needed
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDBZMA9Of2cMCIPgEnbO1nhP_T2W2sdXoU',
-    appId: '1:588884441324:web:1e40924f942b0df6070dc9',
+    apiKey: 'AIzaSyA89UIq7gsPM1NDtm6HjyyvdbvdC1-_BCM',
+    appId: '1:588884441324:android:01db426bd5f6951e070dc9',
     messagingSenderId: '588884441324',
     projectId: 'signal-nco-ew',
     storageBucket: 'signal-nco-ew.firebasestorage.app',
   );
 
-  // iOS config - placeholder
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDBZMA9Of2cMCIPgEnbO1nhP_T2W2sdXoU',
-    appId: '1:588884441324:web:1e40924f942b0df6070dc9',
+    apiKey: 'AIzaSyDvsaCPIc9lhVzeBFHt9iSwQwkUb5o5mLM',
+    appId: '1:588884441324:ios:a2acdf1bef977d87070dc9',
     messagingSenderId: '588884441324',
     projectId: 'signal-nco-ew',
     storageBucket: 'signal-nco-ew.firebasestorage.app',
+    iosClientId: '588884441324-r27rpev0u3f8q1i5hbfb1kgbt1dm44l9.apps.googleusercontent.com',
     iosBundleId: 'com.signalschool.signalNcoEw',
   );
 
-  // macOS config - placeholder
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyDBZMA9Of2cMCIPgEnbO1nhP_T2W2sdXoU',
     appId: '1:588884441324:web:1e40924f942b0df6070dc9',
@@ -70,12 +68,14 @@ class DefaultFirebaseOptions {
     iosBundleId: 'com.signalschool.signalNcoEw',
   );
 
-  // Windows config - placeholder
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDBZMA9Of2cMCIPgEnbO1nhP_T2W2sdXoU',
-    appId: '1:588884441324:web:1e40924f942b0df6070dc9',
+    apiKey: 'AIzaSyD_2t0TBFJoZOEnneFImUhpfxt_1MvRIAI',
+    appId: '1:588884441324:web:44f58a540dfded92070dc9',
     messagingSenderId: '588884441324',
     projectId: 'signal-nco-ew',
+    authDomain: 'signal-nco-ew.firebaseapp.com',
     storageBucket: 'signal-nco-ew.firebasestorage.app',
+    measurementId: 'G-FX6HYX269N',
   );
+
 }
